@@ -1,0 +1,24 @@
+# re im  (polos banda 1 kHz propuesta @6 kHz)
+0.655185 -0.614168
+0.458953 -0.553724
+0.458953 0.553724
+0.655185 0.614168
+0.101653 0.849664
+0.234935 0.629368
+0.234935 -0.629368
+0.101653 -0.849664
+
+
+# ceros banda propuesta (multiplicidad 4 en +1 y -1)
+1 0
+-1 0
+
+
+# polos biquad previo 1 kHz @51,2 kHz
+1.000000 0.000000
+0.871000 0.000000
+
+
+# ceros biquad previo
+1 0
+-1 0

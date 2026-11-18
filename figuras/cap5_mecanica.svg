@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760" font-family="Arial, Helvetica, sans-serif">
+<rect width="1400" height="760" fill="#fff"/>
+<text x="700" y="36" font-size="23" text-anchor="middle" fill="#222" font-weight="bold">Concepto mecánico (cotas en mm, aproximadas)</text>
+<rect x="140" y="300" width="160.0" height="320.0" rx="18" fill="#f7f7f7" stroke="#333" stroke-width="3"/>
+<rect x="164.0" y="324.0" width="112.0" height="84.0" fill="#1e3a5f" stroke="#111" stroke-width="2"/>
+<text x="220.0" y="372.0" font-size="17" text-anchor="middle" fill="#fff" font-weight="bold">TFT de 2,8 in</text>
+<circle cx="176.0" cy="444.0" r="12.0" fill="#ddd" stroke="#333" stroke-width="2"/>
+<text x="176.0" y="468.0" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">MEDIR</text>
+<circle cx="220.0" cy="444.0" r="12.0" fill="#ddd" stroke="#333" stroke-width="2"/>
+<text x="220.0" y="468.0" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">CAL</text>
+<circle cx="264.0" cy="444.0" r="12.0" fill="#ddd" stroke="#333" stroke-width="2"/>
+<text x="264.0" y="468.0" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">MENÚ</text>
+<circle cx="220.0" cy="490.0" r="6.0" fill="#2ca02c" stroke="#333"/>
+<text x="232.0" y="496.0" font-size="13" text-anchor="start" fill="#222" font-weight="normal">LED</text>
+<rect x="170.0" y="570.0" width="100.0" height="36.0" fill="none" stroke="#1e5e9f" stroke-width="2" stroke-dasharray="6,4"/>
+<text x="220.0" y="592.0" font-size="13" text-anchor="middle" fill="#1e5e9f" font-weight="normal">antena del módulo</text>
+<rect x="212.0" y="100.0" width="16.0" height="200.0" fill="#ccc" stroke="#333" stroke-width="2"/>
+<circle cx="220.0" cy="100.0" r="18.0" fill="#bfbfbf" stroke="#333" stroke-width="2"/>
+<circle cx="220.0" cy="100.0" r="22.0" fill="none" stroke="#888" stroke-width="2" stroke-dasharray="3,3"/>
+<text x="288.0" y="105.0" font-size="14" text-anchor="start" fill="#222" font-weight="normal">micrófono en placa satélite + pantalla antiviento</text>
+<text x="288.0" y="200.0" font-size="14" text-anchor="start" fill="#222" font-weight="normal">vástago de ≈ 100 mm (cable apantallado de 6 hilos)</text>
+<line x1="110" y1="300" x2="110" y2="620.0" stroke="#555"/>
+<text x="100" y="460.0" font-size="15" text-anchor="end" fill="#222" font-weight="normal">160</text>
+<line x1="140" y1="645.0" x2="300.0" y2="645.0" stroke="#555"/>
+<text x="220.0" y="665.0" font-size="15" text-anchor="middle" fill="#222" font-weight="normal">80</text>
+<text x="220.0" y="740" font-size="17" text-anchor="middle" fill="#222" font-weight="bold">Vista frontal</text>
+<rect x="760" y="300" width="70.0" height="320.0" rx="10" fill="#f7f7f7" stroke="#333" stroke-width="3"/>
+<rect x="770.0" y="440.0" width="44.0" height="140.0" rx="8" fill="#f3e8f7" stroke="#6a1b9a" stroke-width="2"/>
+<text x="792.0" y="516.0" font-size="14" text-anchor="middle" fill="#6a1b9a" font-weight="bold">18650</text>
+<rect x="816.0" y="316.0" width="6.0" height="290.0" fill="#2e7d32"/>
+<text x="844.0" y="360.0" font-size="14" text-anchor="start" fill="#2e7d32" font-weight="normal">PCB de 4 capas</text>
+<rect x="830.0" y="540.0" width="8.0" height="20.0" fill="#666"/>
+<text x="844.0" y="552.0" font-size="14" text-anchor="start" fill="#222" font-weight="normal">USB-C</text>
+<rect x="830.0" y="500.0" width="6.0" height="24.0" fill="#999"/>
+<text x="844.0" y="514.0" font-size="14" text-anchor="start" fill="#222" font-weight="normal">microSD</text>
+<rect x="780.0" y="620.0" width="28.0" height="10.0" fill="#999"/>
+<text x="844.0" y="626.0" font-size="14" text-anchor="start" fill="#222" font-weight="normal">rosca 1/4" para trípode</text>
+<rect x="787.0" y="100.0" width="16.0" height="200.0" fill="#ccc" stroke="#333" stroke-width="2"/>
+<line x1="760" y1="645.0" x2="830.0" y2="645.0" stroke="#555"/>
+<text x="795.0" y="665.0" font-size="15" text-anchor="middle" fill="#222" font-weight="normal">35</text>
+<text x="795.0" y="740" font-size="17" text-anchor="middle" fill="#222" font-weight="bold">Vista lateral</text>
+<text x="1000" y="300" font-size="15" text-anchor="start" fill="#333" font-weight="normal">• Micrófono alejado del cuerpo: reduce reflexiones y</text>
+<text x="1000" y="330" font-size="15" text-anchor="start" fill="#333" font-weight="normal">  difracción del gabinete en las bandas altas.</text>
+<text x="1000" y="360" font-size="15" text-anchor="start" fill="#333" font-weight="normal">• Antena en el extremo opuesto al micrófono:</text>
+<text x="1000" y="390" font-size="15" text-anchor="start" fill="#333" font-weight="normal">  menos acople de RF al cable y a la cápsula.</text>
+<text x="1000" y="420" font-size="15" text-anchor="start" fill="#333" font-weight="normal">• Portapila accesible: batería reemplazable.</text>
+<text x="1000" y="450" font-size="15" text-anchor="start" fill="#333" font-weight="normal">• Gabinete prototipo impreso en 3D (PETG).</text>
+</svg>

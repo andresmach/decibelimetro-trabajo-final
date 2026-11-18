@@ -1,0 +1,53 @@
+== 1) Presupuesto de la tarea DSP ==
+Período de bloque T = 21.333 ms (1024 muestras a 48000 Hz)
+Multiplicaciones por bloque: 70,827; muestras de banda por bloque: 2032
+Ciclos: filtros 708,267 + conversión 6,144 + acumulación 8,128 + sobrecarga 20,000
+C nominal = 3.09 ms  (U = 14.5 %)
+C pesimista (x2) = 6.19 ms  (U = 29.0 %)
+
+== 2) Análisis de tiempo de respuesta (núcleo 1) ==
+Interferencias consideradas: Tick FreeRTOS (T = 1.00 ms, C = 3 µs); ISR GDMA del I2S (T = 10.67 ms, C = 5 µs); Tarea IPC1 (prio 24, esporádica) (T = 10.00 ms, C = 20 µs)
+Bloqueo SMP supuesto B = 50 µs; jitter de activación J_DSP = 0,005 ms (latencia de la ISR)
+R_DSP (nominal) = 3.186 ms  ≤  D = 21.333 ms  → holgura 18.15 ms
+R_DSP (pesimista) = 6.289 ms  ≤  D = 21.333 ms  → holgura 15.04 ms
+Utilización de las interferencias: 0.55 %
+Utilización total núcleo 1: nominal 15.0 %, pesimista 29.6 %
+
+== 3) Anillo DMA: la cola del driver tiene desc_num − 1 entradas → Q = (N−1)·512; S_max = Q/fs − C ==
+desc × frames | Q [muestras] | capacidad [ms] | memoria [kB] | S_max nominal [ms] | S_max pesimista [ms]
+   4 × 512    |   1536       |    32.0        |   8.0        |    28.9            |    25.8
+   8 × 512    |   3584       |    74.7        |  16.0        |    71.6            |    68.5
+  12 × 512    |   5632       |   117.3        |  24.0        |   114.2            |   111.1
+  16 × 512    |   7680       |   160.0        |  32.0        |   156.9            |   153.8
+
+== 4) Simulación: detención de 100 ms del núcleo 1 en t = 100 ms (C pesimista) ==
+Tiempo de recuperación tras una detención S: t_r = S·U/(1−U); con U = 0.290: S = 100 ms → 41 ms
+8 descriptores: primera pérdida con detención de 72 ms
+16 descriptores: primera pérdida con detención de 156 ms
+8 descriptores: ocupación máxima 100 %, muestras perdidas 1536
+16 descriptores: ocupación máxima 67 %, muestras perdidas 0
+
+== 5) Pool de 4 buffers del prototipo: sobrescritura del bloque en proceso ==
+Período del prototipo: 20.0 ms
+C_consumidor =   5 ms: procesados 399, alterados   0 (  0 %), descartados   0 (de 400)
+C_consumidor =  15 ms: procesados 399, alterados   0 (  0 %), descartados   0 (de 400)
+C_consumidor =  19 ms: procesados 399, alterados   0 (  0 %), descartados   0 (de 400)
+C_consumidor =  21 ms: procesados 381, alterados 321 ( 84 %), descartados  15 (de 400)
+C_consumidor =  25 ms: procesados 320, alterados 308 ( 96 %), descartados  76 (de 400)
+C_consumidor =  30 ms: procesados 267, alterados 261 ( 98 %), descartados 129 (de 400)
+C_consumidor =  40 ms: procesados 200, alterados 197 ( 98 %), descartados 196 (de 400)
+C_consumidor =  60 ms: procesados 134, alterados 133 ( 99 %), descartados 262 (de 400)
+C_consumidor =  80 ms: procesados 100, alterados  99 ( 99 %), descartados 296 (de 400)
+
+== 5b) Núcleo 0: análisis de tiempo de respuesta con supuestos explícitos ==
+Utilización supuesta del núcleo 0: 49.8 %
+T_APP   prio 10: C =   1.0 ms, R =    3.6 ms, D =   50.0 ms → cumple
+T_UI    prio  8: C =  40.0 ms, R =   57.3 ms, D =  234.7 ms → cumple
+T_STOR  prio  6: C =  30.0 ms, R =   97.5 ms, D = 1000.0 ms → cumple
+T_NET   prio  5: C =   5.0 ms, R =  106.1 ms, D =  234.7 ms → cumple
+T_MON   prio  2: C =   1.0 ms, R =  107.1 ms, D = 1000.0 ms → cumple
+
+== 6) Latencias ==
+Intervalo de actualización: 11 bloques = 234.7 ms (RD-06: ≤ 250 ms)
+Latencia de un comando hasta aplicarse en la tarea DSP: ≤ T + C = 27.5 ms (se aplica en el borde de bloque)
+Latencia muestra → pantalla: ≤ 235 (integración) + 6.2 (DSP) + 40 (dibujo, a medir) = 281 ms

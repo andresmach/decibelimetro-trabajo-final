@@ -1,0 +1,502 @@
+                           Universidad Nacional de Entre Ríos
+                                  Facultad de Ingeniería
+                         Especialización en Sistemas Embebidos
+
+
+
+                                     Capítulo 5
+                             Diseño de Hardware
+Alimentación autónoma, cadena del micrófono, circuito impreso y
+                          gabinete
+
+Analizador autónomo de ruido ambiente por bandas de octava para la verificación
+                 de cabinas audiométricas según ISO 8253-1
+
+
+
+
+Autor: Andrés Machtey
+Director propuesto: Esp. Víctor Valotto (FIUNER)
+Versión: 0.1 (borrador para revisión) · Noviembre de 2026
+Material reproducible: hw/analisis_potencia.py, hw/graficos_hw.gp, hw/resultados/ y
+scripts/diagrama_hw.py
+Siglas y convenciones
+      Sigla                 Significado                    Sigla                  Significado
+LDO           Regulador lineal de baja caída           PSRR / PSR    Rechazo al rizado de la alimentación
+OCV           Tensión a circuito abierto de la celda   SoC           Estado de carga de la batería
+              Líneas de configuración del conector
+CC                                                     ESD           Descarga electrostática
+              USB-C
+ADC           Conversor analógico-digital              GPIO          Entrada/salida de propósito general
+I2S           Bus serie de audio digital               SPI / SDMMC   Bus serie / controlador de tarjetas SD
+                                                                     Encapsulado de contactos planos (sin
+PCB           Circuito impreso                         LGA
+                                                                     patas)
+TFT           Pantalla de cristal líquido color        EMC           Compatibilidad electromagnética
+BOM           Lista de materiales                      PSRAM         RAM externa del módulo
+
+
+Los identificadores RD, EN, CU, D3.x y D4.x remiten al anteproyecto, al anexo de Ingeniería de
+Software y a los Capítulos 3 y 4; las pruebas nuevas son PU-HW-xx, los hallazgos H5.x y las
+decisiones D5.x. Todas las corrientes de consumo son supuestos tomados como orden de
+magnitud de hojas de datos; se reemplazan por mediciones (PU-HW-02, EN-07). Los componentes
+con número de parte son candidatos; la selección se confirma al capturar el esquemático
+(entregable E4).
+
+5.1 Enfoque del capítulo
+Este capítulo analiza el proyecto desde el diseño de hardware de sistemas embebidos:
+la alimentación a batería y su autonomía, la cadena de alimentación y conexión del
+micrófono, la selección de componentes, la asignación de pines, el circuito impreso, el
+gabinete y los aspectos normativos. Parte del análisis del prototipo del curso de DSP,
+armado sobre una placa de desarrollo y un protoboard, y llega a una arquitectura de
+hardware propia, justificada con cálculos reproducibles.
+El nombre de la materia y su bibliografía se ajustarán cuando se incorpore su material; el
+contenido sigue las etapas habituales de diseño: requisitos, arquitectura, selección,
+cálculo, implementación física y verificación.
+
+Requisitos que condicionan el hardware
+  Requisito           Enunciado (anteproyecto)                    Consecuencia para el hardware
+              Ruido propio por banda ≥ 5 dB bajo el límite
+                                                         Micrófono de bajo ruido; alimentación del
+RD-03
+              ISO                                        micrófono sin rizado que se sume al piso
+                                                         Punto de sobrecarga acústica del micrófono ≥
+RD-04         Hasta ≥ 100 dB SPL sin saturar
+                                                         110 dB SPL
+              Autonomía ≥ 8 h con Wi-Fi; carga ≤ 4 h por Capacidad de la batería, eficiencia del regulador,
+RD-08
+              USB-C                                      corriente de carga
+              Guardado de −10 a 50 °C; consumo apagado Corte real de la alimentación; fugas del cargador
+RD-12
+              ≤ 100 µA                                   y de la protección
+              Caída de 1 m en el estuche; conectores     Fijación de la batería y de la placa; micrófono
+RD-13
+              protegidos                                 protegido
+              Equipo de mano ≈ 160 × 80 × 35 mm, ≤ 350
+Físicas                                                  Formato de la celda y de la pantalla
+              g
+                                                         Celda certificada, protección, buenas prácticas de
+Normativos    IEC 61010-1, IEC 61326-1, IEC 62133-2
+                                                         EMC
+             Tabla 5.1. Requisitos del anteproyecto que condicionan el diseño de hardware.
+
+
+5.2 Análisis del hardware previo
+El prototipo del curso usaba una placa ESP32 DevKit v1 alimentada por el USB de una
+PC, un módulo con el micrófono INMP441 conectado con cables Dupont sobre un
+protoboard y un puente de cable para sacar los datos por la consola USB. La Tabla 5.2
+resume los hallazgos.
+  ID                     Hallazgo                        Evidencia                 Consecuencia              Sev.
+       Micrófono alimentado desde el 3V3 de la
+       placa de desarrollo, el mismo regulador    README: conexión          Rizado digital en la
+H5.1   que el ESP32 y su Wi-Fi; la lista de       VDD → 3V3; tabla de       alimentación del micrófono     Alta
+       materiales menciona un LDO dedicado        materiales                (sección 5.6)
+       que el cableado no usa
+       Micrófono INMP441: margen de 3,5 dB en
+H5.2                                              Capítulo 3, sección 3.8   No cumple RD-03                Alta
+       500 Hz
+       Bus I2S con cables Dupont de longitud
+                                                                            Reflexiones e interferencia;
+H5.3   variable sobre protoboard; reloj de 3,3    README: conexiones                                       Media
+                                                                            fallas intermitentes
+       MHz sin resistencias serie
+       WS en GPIO15 y BCLK en GPIO14 del
+                                                                            Comportamiento indefinido
+H5.4   ESP32 original: pines con función de       app_config.h                                             Media
+                                                                            durante el arranque
+       arranque (strapping) y JTAG
+       Dependencia de la PC: sin batería, sin                               No es un instrumento
+H5.5                                              README: diagrama                                         Alta
+       cargador, sin interfaz propia                                        autónomo
+       Puente de cable D17 → RX0 sobre las                                  Solución dependiente de la
+                                                  README: "single USB
+H5.6   líneas de la consola, que también usa el                             placa; posible conflicto       Media
+                                                  cable trick"
+       conversor USB de la placa                                            eléctrico (a verificar)
+       Micrófono en el protoboard, junto a la
+                                                                            Error de nivel en bandas
+H5.7   placa y los cables: sin control de         Montaje                                                  Media
+                                                                            altas no caracterizado
+       reflexiones ni de su posición
+H5.8   Sin protección ESD propia ni gabinete      Montaje                   No apto para uso en campo      Media
+
+
+                             Tabla 5.2. Hallazgos en el hardware del prototipo.
+
+El prototipo cumplió su objetivo académico, que era demostrar el procesamiento, pero
+ninguno de sus elementos de hardware se conserva en el diseño autónomo. La placa de
+desarrollo se mantiene solo como plataforma de desarrollo del firmware hasta que esté
+disponible el circuito impreso propio (entregables E3 y E4).
+
+5.3 Arquitectura de hardware
+La Figura 5.1 muestra la arquitectura propuesta. El micrófono digital va en una placa
+satélite al extremo de un vástago. El módulo ESP32-S3 concentra el procesamiento y la
+radio. La interfaz local está formada por la pantalla, los pulsadores y un LED. El
+almacenamiento es una microSD, y la alimentación autónoma combina una celda Li-ion,
+un cargador USB-C y dos reguladores.
+            Figura 5.1. Diagrama en bloques del instrumento autónomo (el mismo del anteproyecto).
+
+Selección de componentes
+     Función                Alternativas evaluadas             Elegido                        Motivo
+                                                                              Antena integrada y radio ya
+                      Placa de desarrollo; chip ESP32-
+                                                         Módulo WROOM-1       certificada; 16 MB de flash y 8 MB de
+Procesador y radio    S3 suelto; módulo ESP32-S3-
+                                                         N16R8                PSRAM; USB nativo para programar
+                      WROOM-1
+                                                                              sin conversor
+                                                                              SNR 65 dBA (EIN 29 dBA),
+                      INMP441; ICS-43434; cápsula
+Micrófono                                                ICS-43434            sobrecarga 120 dB SPL, sensibilidad
+                      electret + códec
+                                                                              ±1 dB; misma interfaz I2S (D3.2)
+                                                                              Sin ruido de conmutación; la pérdida
+Regulador principal   LDO; conversor buck-boost          LDO 3,3 V ≥ 600 mA   de autonomía es del 11 % (sección
+                                                                              5.5)
+Regulador del         Compartir el riel digital; LDO                          6,5 µVrms, 12 µA de reposo, alto
+                                                         LP5907-3.3
+micrófono             dedicado                                                PSRR; aísla las ráfagas del Wi-Fi
+                                                                              Camino de potencia (usa el equipo
+                                                                              mientras carga), hasta 1,5 A,
+Cargador              TP4056; MCP73831; BQ24074          BQ24074
+                                                                              protección de entrada, selección de
+                                                                              corriente por pines
+                      LiPo 2000 mAh; 18650 2600 mAh;     18650 2600 mAh       Autonomía con margen al fin de vida;
+Batería
+                      LiPo 3000 mAh                      protegida            reemplazable por el usuario
+                                                                              Legible y con color para el veredicto;
+Pantalla              OLED 1,3"; TFT 2,4–2,8" SPI        TFT 2,8" SPI
+                                                                              retroiluminación regulable por PWM
+                                                                              Capacidad, extracción por el usuario
+                      Flash interna; microSD por SPI;
+Almacenamiento                                           microSD por SDMMC    y bus independiente de la pantalla
+                      microSD por SDMMC
+                                                                              (Capítulo 4)
+
+
+Tabla 5.3. Selección de los componentes principales. Los números de parte son candidatos a confirmar en E4.
+5.4 Alimentación y autonomía
+
+
+
+
+Figura 5.2. Árbol de alimentación: cargador con camino de potencia, interruptor, LDO digital y LDO dedicado
+                         al micrófono, con las señales de gestión hacia el ESP32-S3.
+
+Presupuesto de consumo
+                         Carga                        Medición [mA]      Reposo [mA]      Peor caso [mA]
+ESP32-S3 a 240 MHz con Wi-Fi en modo punto de
+                                                           110                100               130
+acceso
+Pantalla: controlador                                        5                 5                 5
+Pantalla: retroiluminación (PWM)                            20                 8                 40
+microSD (promedio con escrituras)                            1                0,5                3
+LED bicolor (promedio)                                       2                 1                 5
+Micrófono ICS-43434 (alto desempeño)                       0,49                0                0,49
+Reposo de reguladores y divisor de batería                  0,2               0,2               0,2
+Total                                                      139                115               184
+
+
+ Tabla 5.4. Presupuesto de consumo supuesto por modo. El pico de transmisión del Wi-Fi se supone de 450
+                                     mA para el sistema completo.
+
+LDO o conversor buck-boost
+Un LDO entrega a la carga la misma corriente que toma de la batería y deja de regular
+cuando la batería, descontada la caída en su resistencia interna, no supera la salida más
+la caída mínima del regulador. Un buck-boost funciona hasta tensiones de batería más
+bajas y toma menos corriente cuando la batería está por encima de la salida, pero
+conmuta a cientos de kilohercios a megahercios cerca de un micrófono de bajo ruido. La
+condición de regulación del LDO es:
+  OCV − I_pico · R_int ≥ V_out + V_caída ⇒ OCV ≥ 3,3 + 0,25 + 0,45 · 0,15 = 3,62 V
+                                         (1)
+Con la curva típica de una celda Li-ion (Figura 5.3, derecha), 3,62 V corresponde a un 8 %
+de carga remanente: el LDO aprovecha el 92 % de la capacidad. El buck-boost aprovecha
+el 99 % y toma 0,965 veces la corriente de carga (rendimiento del 90 % con 3,8 V
+medios). En conjunto, el buck-boost daría un 11 % más de autonomía.
+Decisión D5.1: regulador principal LDO de 3,3 V (≥ 600 mA, caída ≤ 300 mV). El 11 %
+de autonomía no compensa agregar una fuente de conmutación en un instrumento cuyo
+desempeño depende del ruido, más aún cuando la autonomía con LDO cumple RD-08
+con margen (Tabla 5.5). El firmware corta la medición cuando la batería con carga baja de
+3,60 V, antes de que el LDO deje de regular.
+
+Batería y autonomía
+
+
+
+
+Figura 5.3. Izquierda: autonomía en función de la corriente media para dos baterías, nuevas y al fin de su vida
+              útil. Derecha: curva típica de tensión de una celda Li-ion y límites de los reguladores.
+
+        Batería                      Condición              Medición [h]      Reposo [h]       Peor caso [h]
+LiPo 2000 mAh              Nueva, 25 °C                        13,3              16,1              10,1
+LiPo 2000 mAh              Fin de vida (80 %), 10 °C            9,6              11,6               7,2
+18650 2600 mAh             Nueva, 25 °C                        17,3              20,9              13,1
+18650 2600 mAh             Fin de vida (80 %), 10 °C           12,5              15,1               9,4
+LiPo 3000 mAh              Fin de vida (80 %), 10 °C           14,4              17,4              10,9
+
+
+Tabla 5.5. Autonomía estimada con LDO (92 % de capacidad utilizable). "Fin de vida y 10 °C" aplica un factor
+                                     0,72 a la capacidad nominal.
+
+Decisión D5.2: celda 18650 de 2600 mAh con protección, en portapila. La LiPo de
+2000 mAh no cumple RD-08 en el peor caso al final de su vida útil; la 18650 cumple con
+9,4 h. Además, la celda en portapila satisface el requisito de batería reemplazable del
+anteproyecto y entra en el espesor de 35 mm. Una LiPo de 3000 mAh daría más margen,
+pero las celdas planas requieren fijación y protección mecánica cuidadosas y no son
+reemplazables por el usuario.
+
+Carga por USB-C
+Con la aproximación t ≈ 0,8 · C / I + 0,6 h (carga a corriente constante y luego a tensión
+constante), la 18650 tarda 2,7 h a 1 A y 4,8 h a 500 mA. Para cumplir RD-08 (≤ 4 h) hace
+falta cargar a 1 A, pero un puerto USB solo garantiza 500 mA salvo que anuncie más. Con
+resistencias de 5,1 kΩ en CC1 y CC2 el equipo se presenta como consumidor, y la
+tensión en la línea CC activa indica la corriente que ofrece la fuente: por defecto, 1,5 A o 3
+A.
+Decisión D5.3: cargador BQ24074 con camino de potencia y corriente según la
+fuente. El ADC1 lee CC1 y CC2; el firmware selecciona 1 A (modo ILIM) solo si la fuente
+anuncia ≥ 1,5 A y, si no, 500 mA, e informa el tiempo estimado. El camino de potencia
+permite usar el equipo mientras carga sin perturbar la terminación de la carga. A 1 A el
+cargador lineal disipa ≈ 1,3 W y reduce la corriente por regulación térmica, lo que exige un
+encapsulado con almohadilla térmica y cobre en el PCB.
+
+Apagado y almacenamiento (RD-12)
+Un interruptor deslizante corta VSYS, de modo que con el equipo apagado solo quedan la
+protección de la celda (≈ 3 µA) y la fuga del cargador sin entrada (≈ 5 µA, a verificar): unos
+9 µA frente a los 100 µA de RD-12. En 3 meses la pérdida es de ≈ 180 mAh por
+autodescarga química y 20 mAh por la electrónica: queda ≈ 90 % de la carga (RD-12: ≥
+50 %). Es la decisión D5.4.
+
+5.5 Cadena del micrófono
+Rizado admisible en la alimentación
+El ICS-43434 especifica un rechazo a la alimentación de −100 dBFS para un rizado de
+100 mVpp (onda cuadrada de 217 Hz). Su fondo de escala corresponde a unos 120 dB
+SPL. Para que el rizado no se note, su efecto debe quedar 10 dB por debajo del piso
+estimado en 500 Hz (13,5 dB SPL, Capítulo 3), es decir, en 3,5 dB SPL = −116,5 dBFS.
+Escalando linealmente desde la especificación:
+            V_rizado,adm = 100 mVpp · 10^((−116,5 − (−100)) / 20) ≈ 15 mVpp                (2)
+El Wi-Fi en modo punto de acceso transmite balizas cada 102,4 ms y ráfagas de datos,
+con escalones de corriente de cientos de miliamperes. La frecuencia de las balizas, 9,77
+Hz, tiene armónicos en todas las bandas. Un LDO compartido responde a esos escalones
+con transitorios del orden de decenas de milivoltios (se supone 40 mVpp), por encima de
+lo admisible. En cambio, en la batería el escalón produce ≈ 45 mVpp (300 mA × 0,15 Ω), y
+un LDO dedicado con 60 dB de PSRR lo reduce a ≈ 45 µVpp en el micrófono.
+Decisión D5.5: riel propio para el micrófono. Un filtro RC (10 Ω, 10 µF) alimenta, desde
+VSYS, un LP5907-3.3 que alimenta solo la placa satélite a través de una perla de ferrita,
+con un capacitor cerámico junto al micrófono. El micrófono consume 0,49 mA, así que la
+caída del LP5907 es de pocos milivoltios y el riel se mantiene en 3,3 V mientras VSYS
+supere ≈ 3,35 V, por debajo del corte de 3,60 V del firmware. El ensayo EN-09 (piso con
+Wi-Fi activo e inactivo, diferencia ≤ 1 dB) verifica esta decisión.
+
+Placa satélite e integridad de la señal
+ • Montaje acústico. El ICS-43434 tiene el puerto acústico en la cara inferior: la placa
+   satélite lleva una perforación bajo el puerto, una junta que sella el camino acústico y
+   una pantalla antiviento. Se siguen las recomendaciones de montaje del fabricante [6].
+ • Ensamblado. El encapsulado de 3,50 × 2,65 × 0,98 mm con contactos planos
+   requiere pasta por plantilla y refusión (horno o aire caliente). Como alternativa para el
+   primer prototipo, se usa un módulo comercial con el ICS-43434 ya montado.
+ • Señales I2S por el vástago. El reloj de bit es de 48 kHz × 64 = 3,072 MHz. Un cable
+   apantallado de 6 hilos (VDD, GND, BCLK, WS, SD y malla) de ≈ 15 cm, con
+   resistencias serie de 33 Ω en el origen de cada señal (BCLK y WS en el ESP32, SD
+   en el micrófono), limita las reflexiones y la emisión. El pin L/R del micrófono se
+   conecta a GND (canal izquierdo).
+ • Interferencia de RF. Un micrófono MEMS puede demodular la portadora de 2,4 GHz
+   y producir un zumbido audible a la frecuencia de las ráfagas. La antena del módulo va
+   en el extremo del gabinete opuesto al vástago, la malla del cable se conecta a GND
+   en la placa principal y la placa satélite tiene plano de masa completo. EN-09 detecta
+   cualquier efecto residual.
+ • Influencia del gabinete. A 8 kHz la longitud de onda es de ≈ 4,3 cm, comparable al
+   cuerpo del equipo: su difracción y sus reflexiones alteran el nivel en las bandas altas.
+   El vástago de ≈ 100 mm aleja el micrófono del cuerpo, y el efecto residual se corrige
+   con las correcciones C_b por banda del Capítulo 3, ajustadas en EN-05.
+
+5.6 Asignación de pines
+En el módulo ESP32-S3-WROOM-1 N16R8 no se usan: GPIO26 a GPIO32 (flash y
+PSRAM internas), GPIO35 a GPIO37 (PSRAM octal), los pines de arranque GPIO0,
+GPIO3, GPIO45 y GPIO46 (salvo GPIO0 como botón interno de servicio) ni los del ADC2
+para mediciones analógicas, porque el ADC2 no está disponible con el Wi-Fi activo. Las
+entradas analógicas van en el ADC1 (GPIO1 a GPIO10), la pantalla en los pines
+dedicados de SPI2 y la microSD en pines libres, ya que el controlador SDMMC del
+ESP32-S3 se enruta por la matriz de GPIO.
+             Función                GPIO                      Función                   GPIO
+VBAT (divisor) · ADC1                  1        TFT DC                                     9
+USB-C CC1 · ADC1                       2        TFT CS (SPI2)                             10
+USB-C CC2 · ADC1                       4        TFT MOSI (SPI2)                           11
+Cargador /CHG                          5        TFT SCLK (SPI2)                           12
+Cargador /PGOOD                        6        TFT retroiluminación (PWM)                14
+Cargador EN1                           7        TFT RST                                   21
+Cargador EN2                          42        microSD CMD / CLK / D0               38 / 39 / 40
+I2S BCLK / WS / SD               15 / 16 / 17   microSD detección de tarjeta              41
+Pulsadores MEDIR / CAL / MENÚ     8 / 18 / 47   LED rojo / verde                       13 / 48
+USB nativo D− / D+                 19 / 20      UART0 (puntos de prueba)               43 / 44
+Botón de servicio (arranque)           0        Sin uso: arranque, PSRAM, flash   3, 45, 46, 26–37
+Tabla 5.6. Asignación de pines propuesta (pines dedicados de SPI2 verificados en ESP-IDF 5.4: CS 10, MOSI
+                                                11, CLK 12).
+
+Las líneas CC de un consumidor USB-C llegan como máximo a ≈ 2,04 V (fuente de 3 A
+sobre 5,1 kΩ), dentro del rango del ADC con la atenuación máxima. Los pulsadores usan
+las resistencias de pull-up internas y el antirrebote por software del Capítulo 4. Es la
+decisión D5.6.
+
+5.7 Circuito impreso, gabinete y fabricación
+Circuito impreso
+ • Cuatro capas (D5.7): señales / masa / alimentación / señales. El plano de masa
+   continuo bajo el módulo y las pistas rápidas reduce la emisión y mejora el
+   comportamiento de la radio. El sobrecosto de un prototipo de cuatro capas es
+   pequeño frente a una reelaboración.
+ • Antena: el módulo va en el borde de la placa, con la zona libre de cobre y de
+   componentes que indica su hoja de datos [2], y en el extremo opuesto al vástago del
+   micrófono.
+ • Separación de rieles: el riel del micrófono se rutea lejos del LDO digital, del cargador
+   y de la retroiluminación; cada integrado lleva su desacople junto a los pines.
+ • Protección: diodos ESD en VBUS y en D+/D− del USB-C, y en las líneas del vástago
+   hacia el conector.
+ • Térmica: el LDO principal disipa hasta ≈ 125 mW con la batería llena. En SOT-23-5
+   (≈ 250 °C/W) se calentaría 31 °C por encima del ambiente; en SOT-89 o DFN (≈ 90
+   °C/W), 11 °C. Se elige este último encapsulado. El cargador lleva su almohadilla
+   térmica soldada a un plano de cobre.
+ • Prueba y depuración: puntos de prueba en VSYS, 3V3_D, 3V3_MIC, BCLK, WS, SD
+   y UART0; programación y depuración por el USB nativo del ESP32-S3
+   (USB-Serial/JTAG), sin conversor USB-UART.
+Gabinete
+
+
+
+
+Figura 5.4. Concepto mecánico: vista frontal y lateral, con el vástago del micrófono y la ubicación de la antena,
+                                         la batería y los conectores.
+
+Gabinete prototipo impreso en 3D (PETG), con la celda 18650 en un portapila accesible
+desde una tapa, la placa fijada con tornillos en cuatro puntos para resistir la caída de RD-
+13, la microSD y el USB-C con tapas de goma, una rosca de 1/4" para trípode y el
+vástago desmontable. Es la decisión D5.8.
+
+Costo estimado del prototipo
+                  Ítem                       USD                           Ítem                         USD
+Módulo ESP32-S3-WROOM-1 N16R8                 5       Celda 18650 protegida + portapila                 9,5
+ICS-43434 + placa satélite                    5       microSD (zócalo + tarjeta)                         6
+Pantalla TFT 2,8" SPI                         9       Pulsadores, LED, interruptor, conectores           4
+BQ24074 + LDO + LP5907                        4       Pasivos y protección ESD                          4,5
+PCB de 4 capas (parte del lote de 5)          20      Gabinete PETG, vástago y cable                     12
+Total aproximado                                      ≈ USD 79
+
+
+  Tabla 5.7. Costo estimado de materiales por prototipo, sin envío ni impuestos de importación; dentro de la
+                estimación del anteproyecto (≈ USD 100, que incluía la placa de desarrollo).
+5.8 Normativa y seguridad
+                Norma                                                 Aplicación al prototipo
+IEC 61010-1 (seguridad de equipos de          Equipo de baja tensión alimentado por batería: el foco está en la
+medición)                                     temperatura de las superficies, la resistencia mecánica y el marcado
+                                              Se usa una celda comercial certificada, con protección contra
+IEC 62133-2 (baterías de litio)               sobrecarga, sobredescarga y cortocircuito; termistor de la celda
+                                              conectado al cargador si está disponible
+                                              Fuera del alcance certificar el prototipo; se aplican buenas prácticas
+IEC 61326-1 (compatibilidad
+                                              (plano de masa, protección ESD, cable apantallado) y se verifica la
+electromagnética)
+                                              inmunidad básica en EN-09
+                                              El módulo trae certificaciones de radio de origen; la homologación local
+Radio (ENACOM)                                queda fuera del alcance del prototipo y se documenta como requisito
+                                              para una eventual producción
+RoHS                                          Componentes y soldadura sin plomo
+
+
+                          Tabla 5.8. Normas aplicables y alcance dentro del prototipo.
+
+
+5.9 Plan de verificación
+       ID                        Procedimiento                          Criterio de aceptación               Verifica
+                 Puesta en marcha: tensiones de VSYS, 3V3_D
+                                                                   Tensiones ±3 %; rizado ≤ 15
+PU-HW-01         y 3V3_MIC; rizado en el pin VDD del micrófono                                        D5.5 · RD-03
+                                                                   mVpp
+                 con osciloscopio, con Wi-Fi transmitiendo
+                 Consumo por modo (medición, reposo, peor          Dentro del ±20 % del presupuesto   D5.1, D5.2 · RD-
+PU-HW-02
+                 caso) con amperímetro de registro                 o presupuesto actualizado          08
+PU-HW-03         Corriente de batería con el interruptor abierto   ≤ 100 µA (esperado ≈ 9 µA)         D5.4 · RD-12
+                 Calibración de la lectura de batería contra un
+PU-HW-04                                                           Error ≤ 50 mV                      Corte a 3,60 V
+                 multímetro entre 3,0 y 4,2 V
+                                                                   Corriente seleccionada correcta;
+PU-HW-05         Carga con fuentes que anuncian 0,5, 1,5 y 3 A     tiempo de carga ≤ 4 h con fuente   D5.3 · RD-08
+                                                                   ≥ 1,5 A
+                 Temperatura del LDO y del cargador a 35 °C        Superficies accesibles ≤ 45 °C;    D5.7 · IEC
+PU-HW-06
+                 de ambiente (cámara o caja térmica)               sin cortes térmicos en uso         61010-1
+                                                                   Sin sobrepicos que crucen
+                 Integridad de BCLK, WS y SD en el extremo
+PU-HW-07                                                           umbrales; 0 errores en 1 h de      D5.5
+                 del vástago con osciloscopio
+                                                                   captura de un tono
+                 Piso de ruido en recinto aislado; con Wi-Fi
+EN-02 / EN-09                                                      Ver anteproyecto                   RD-03
+                 activo e inactivo
+EN-07            Autonomía y carga                                 Autonomía ≥ 8 h; carga ≤ 4 h       RD-08
+EN-12 / EN-13    Almacenamiento y caída                            Ver anteproyecto                   RD-12, RD-13
+
+
+                  Tabla 5.9. Pruebas de hardware y ensayos del anteproyecto relacionados.
+5.10 Conclusiones y decisiones
+  ID                       Decisión                                    Justificación                Verificación
+                                                          Sin conmutación junto al micrófono;
+D5.1    Regulador principal LDO 3,3 V (≥ 600 mA)          solo 11 % menos de autonomía que      PU-HW-02
+                                                          un buck-boost
+        Celda 18650 de 2600 mAh protegida, en             Cumple RD-08 con 9,4 h en el peor
+D5.2                                                                                            EN-07
+        portapila                                         caso al fin de vida; reemplazable
+        Cargador BQ24074 con camino de potencia; 1        Carga en 2,7 h sin exceder lo que
+D5.3                                                                                            PU-HW-05
+        A solo con fuente ≥ 1,5 A                         ofrece la fuente
+D5.4    Interruptor de corte de VSYS                      ≈ 9 µA apagado (RD-12)                PU-HW-03
+        Riel dedicado al micrófono (RC + LP5907 +         Rizado admisible ≈ 15 mVpp;           PU-HW-01, PU-HW-
+D5.5
+        ferrita) y placa satélite con cable apantallado   aislamiento de las ráfagas Wi-Fi      07, EN-09
+        Asignación de pines sin arranque, PSRAM ni        Arranque fiable; ADC disponible con
+D5.6                                                                                            Inspección
+        ADC2                                              Wi-Fi
+        PCB de 4 capas; LDO en SOT-89/DFN; antena
+D5.7                                                      EMC, radio y térmica                  PU-HW-06
+        opuesta al micrófono
+        Gabinete PETG con vástago de ≈ 100 mm y
+D5.8                                                      Menos difracción; RD-13               EN-05, EN-13
+        fijación para caída
+
+
+                       Tabla 5.10. Decisiones de diseño del capítulo y su verificación.
+
+Pendientes
+ • Confirmar en las hojas de datos los consumos del ESP32-S3 con Wi-Fi en modo
+   punto de acceso, la fuga de batería del BQ24074 y la caída del LDO elegido;
+   actualizar el presupuesto con PU-HW-02.
+ • Elegir el número de parte del LDO principal y de la pantalla; capturar el esquemático y
+   diseñar el PCB en KiCad (E4).
+ • Decidir entre la placa satélite propia y un módulo comercial con el ICS-43434 para el
+   primer prototipo.
+ • Actualizar en el anteproyecto la batería (18650 de 2600 mAh) y la lista de materiales.
+
+Historial de revisión
+  Versión                                                    Cambios
+0.1          Borrador inicial.
+
+
+
+
+Referencias del capítulo
+[1] Espressif Systems. ESP32-S3 Series Datasheet (consumo por modo de radio) y ESP32-S3
+Technical Reference Manual.
+[2] Espressif Systems. ESP32-S3-WROOM-1 / WROOM-1U Datasheet y ESP32-S3 Hardware
+Design Guidelines (zona libre de la antena, pines de arranque).
+[3] TDK InvenSense. ICS-43434 Multi-Mode Microphone with I2S Digital Output — Data Sheet, rev.
+1.2.
+[4] Texas Instruments. LP5907 250-mA Ultra-Low-Noise Low-IQ LDO — Data Sheet.
+[5] Texas Instruments. BQ2407x 1.5-A USB-Friendly Li-Ion Battery Charger and Power-Path
+Management IC — Data Sheet.
+[6] TDK InvenSense. Recommendations for Mounting and Connecting InvenSense Bottom-Ported
+MEMS Microphones (nota de aplicación).
+[7] USB Implementers Forum. Universal Serial Bus Type-C Cable and Connector Specification
+(resistencias Rd y anuncio de corriente).
+[8] Ott, H. W. Electromagnetic Compatibility Engineering. Wiley, 2009.
+[9] Texas Instruments. TPS63802 2-A High-Current Buck-Boost Converter — Data Sheet
+(alternativa evaluada).
+[10] IEC 61010-1, IEC 61326-1 e IEC 62133-2 (ver anteproyecto).
+

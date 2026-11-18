@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="700" viewBox="0 0 1400 700" font-family="Arial, Helvetica, sans-serif">
+  
+  <rect width="1400" height="700" fill="#ffffff"/>
+
+  <!-- Fuente acústica / calibrador -->
+  <rect x="30" y="80" width="190" height="90" rx="10" fill="#f2f2f2" stroke="#666" stroke-width="2"/>
+  <text x="125" y="118" text-anchor="middle" font-size="20" font-weight="bold" fill="#222">Ruido ambiente</text>
+  <text x="125" y="146" text-anchor="middle" font-size="17" fill="#444">cabina audiométrica</text>
+
+  <rect x="30" y="230" width="190" height="90" rx="10" fill="#f2f2f2" stroke="#666" stroke-width="2"/>
+  <text x="125" y="268" text-anchor="middle" font-size="20" font-weight="bold" fill="#222">Calibrador</text>
+  <text x="125" y="296" text-anchor="middle" font-size="17" fill="#444">94 dB SPL @ 1 kHz</text>
+
+  <!-- Micrófono -->
+  <rect x="290" y="150" width="190" height="110" rx="10" fill="#dceaf7" stroke="#1e5e9f" stroke-width="2.5"/>
+  <text x="385" y="192" text-anchor="middle" font-size="20" font-weight="bold" fill="#123">Micrófono</text>
+  <text x="385" y="218" text-anchor="middle" font-size="17" fill="#123">MEMS digital</text>
+  <text x="385" y="242" text-anchor="middle" font-size="17" fill="#123">I2S · 24 bits</text>
+
+  <line x1="220" y1="125" x2="288" y2="185" stroke="#333" stroke-width="2.5"/>
+  <line x1="220" y1="275" x2="288" y2="225" stroke="#333" stroke-width="2.5" stroke-dasharray="7,5"/>
+
+  <!-- ESP32 -->
+  <rect x="550" y="40" width="460" height="400" rx="14" fill="#fff7e6" stroke="#c77700" stroke-width="3"/>
+  <text x="780" y="78" text-anchor="middle" font-size="23" font-weight="bold" fill="#7a4800">ESP32-S3 · FreeRTOS</text>
+
+  <rect x="575" y="100" width="410" height="70" rx="8" fill="#ffffff" stroke="#c77700" stroke-width="1.8"/>
+  <text x="780" y="130" text-anchor="middle" font-size="18" font-weight="bold" fill="#333">Núcleo 0 · Captura</text>
+  <text x="780" y="155" text-anchor="middle" font-size="16" fill="#444">I2S + DMA → cola de bloques (sin pérdida)</text>
+
+  <rect x="575" y="190" width="410" height="110" rx="8" fill="#ffffff" stroke="#c77700" stroke-width="1.8"/>
+  <text x="780" y="220" text-anchor="middle" font-size="18" font-weight="bold" fill="#333">Núcleo 1 · DSP</text>
+  <text x="780" y="246" text-anchor="middle" font-size="16" fill="#444">Banco de 7 filtros de octava (IEC 61260-1)</text>
+  <text x="780" y="270" text-anchor="middle" font-size="16" fill="#444">125 Hz – 8 kHz · Leq por banda · dB SPL</text>
+  <text x="780" y="292" text-anchor="middle" font-size="16" fill="#444">Verificación ISO 8253-1 → APTA / NO APTA</text>
+
+  <rect x="575" y="320" width="410" height="100" rx="8" fill="#ffffff" stroke="#c77700" stroke-width="1.8"/>
+  <text x="780" y="350" text-anchor="middle" font-size="18" font-weight="bold" fill="#333">Aplicación</text>
+  <text x="780" y="376" text-anchor="middle" font-size="16" fill="#444">Máquina de estados · calibración (NVS)</text>
+  <text x="780" y="400" text-anchor="middle" font-size="16" fill="#444">Sesiones · servidor web · OTA</text>
+
+  <line x1="480" y1="205" x2="572" y2="140" stroke="#333" stroke-width="2.5"/>
+  <line x1="780" y1="170" x2="780" y2="188" stroke="#333" stroke-width="2.2"/>
+  <line x1="780" y1="300" x2="780" y2="318" stroke="#333" stroke-width="2.2"/>
+
+  <!-- Salidas -->
+  <rect x="1080" y="40" width="290" height="95" rx="10" fill="#e5f4e8" stroke="#2e7d32" stroke-width="2.5"/>
+  <text x="1225" y="78" text-anchor="middle" font-size="19" font-weight="bold" fill="#1b4d1f">Interfaz local</text>
+  <text x="1225" y="105" text-anchor="middle" font-size="16" fill="#1b4d1f">Pantalla TFT · botones · LED</text>
+
+  <rect x="1080" y="165" width="290" height="95" rx="10" fill="#e5f4e8" stroke="#2e7d32" stroke-width="2.5"/>
+  <text x="1225" y="203" text-anchor="middle" font-size="19" font-weight="bold" fill="#1b4d1f">microSD</text>
+  <text x="1225" y="230" text-anchor="middle" font-size="16" fill="#1b4d1f">Registro de sesiones (CSV)</text>
+
+  <rect x="1080" y="290" width="290" height="110" rx="10" fill="#e5f4e8" stroke="#2e7d32" stroke-width="2.5"/>
+  <text x="1225" y="328" text-anchor="middle" font-size="19" font-weight="bold" fill="#1b4d1f">Wi-Fi · WebSocket</text>
+  <text x="1225" y="355" text-anchor="middle" font-size="16" fill="#1b4d1f">Panel web en navegador</text>
+  <text x="1225" y="379" text-anchor="middle" font-size="16" fill="#1b4d1f">Historial · informe PDF</text>
+
+  <line x1="1010" y1="120" x2="1078" y2="88" stroke="#333" stroke-width="2.5"/>
+  <line x1="1010" y1="250" x2="1078" y2="213" stroke="#333" stroke-width="2.5"/>
+  <line x1="1010" y1="370" x2="1078" y2="345" stroke="#333" stroke-width="2.5"/>
+
+  <!-- Alimentación -->
+  <rect x="550" y="500" width="460" height="110" rx="12" fill="#f3e8f7" stroke="#6a1b9a" stroke-width="2.5"/>
+  <text x="780" y="540" text-anchor="middle" font-size="20" font-weight="bold" fill="#3d0f5a">Alimentación autónoma</text>
+  <text x="780" y="568" text-anchor="middle" font-size="16" fill="#3d0f5a">Batería Li-ion · cargador USB-C</text>
+  <text x="780" y="592" text-anchor="middle" font-size="16" fill="#3d0f5a">LDO de bajo ruido para el micrófono</text>
+  <line x1="780" y1="500" x2="780" y2="443" stroke="#6a1b9a" stroke-width="2.5"/>
+  <path d="M550,555 L385,555 L385,263" fill="none" stroke="#6a1b9a" stroke-width="2.5"/><polygon points="385,263 392.0,279.0 378.0,279.0" fill="#6a1b9a"/>
+
+  <text x="700" y="670" text-anchor="middle" font-size="17" fill="#555">Analizador autónomo de ruido ambiente por bandas de octava — diagrama en bloques propuesto</text>
+<polygon points="288.0,185.0 271.4,179.7 280.6,169.2" fill="#333"/>
+<polygon points="288.0,225.0 279.3,240.1 271.0,228.8" fill="#333"/>
+<polygon points="572.0,140.0 563.0,154.9 554.9,143.5" fill="#333"/>
+<polygon points="780.0,188.0 773.0,172.0 787.0,172.0" fill="#333"/>
+<polygon points="780.0,318.0 773.0,302.0 787.0,302.0" fill="#333"/>
+<polygon points="1078.0,88.0 1066.5,101.1 1060.5,88.5" fill="#333"/>
+<polygon points="1010.0,120.0 1021.5,106.9 1027.5,119.5" fill="#333"/>
+<polygon points="1078.0,213.0 1067.3,226.8 1060.6,214.5" fill="#333"/>
+<polygon points="1078.0,345.0 1065.4,357.1 1060.6,344.0" fill="#333"/>
+<polygon points="1010.0,370.0 1022.6,357.9 1027.4,371.0" fill="#333"/>
+<polygon points="780.0,443.0 787.0,459.0 773.0,459.0" fill="#6a1b9a"/>
+</svg>

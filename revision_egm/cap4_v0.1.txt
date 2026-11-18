@@ -1,0 +1,520 @@
+                            Universidad Nacional de Entre Ríos
+                                   Facultad de Ingeniería
+                          Especialización en Sistemas Embebidos
+
+
+
+                                       Capítulo 4
+              Sistemas Operativos de Tiempo Real
+      Arquitectura concurrente del firmware, análisis temporal y
+                              robustez
+
+Analizador autónomo de ruido ambiente por bandas de octava para la verificación
+                 de cabinas audiométricas según ISO 8253-1
+
+
+
+
+Autor: Andrés Machtey
+Director propuesto: Esp. Víctor Valotto (FIUNER)
+Versión: 0.1 (borrador para revisión) · Noviembre de 2026
+Material reproducible: rtos/analisis_temporal.py, rtos/graficos_rt.gp, rtos/resultados/ y
+scripts/diagrama_tareas.py
+Siglas y convenciones
+      Sigla                 Significado                     Sigla                  Significado
+               Sistema operativo de tiempo real
+RTOS                                                  ISR             Rutina de servicio de interrupción
+               (FreeRTOS)
+               Multiprocesamiento simétrico (dos
+SMP                                                   DMA / GDMA      Acceso directo a memoria (general)
+               núcleos)
+WCET           Tiempo de ejecución en el peor caso    RTA             Análisis de tiempo de respuesta
+IRAM / DRAM    RAM interna de instrucciones / datos   TWDT            Perro guardián de tareas
+FSM            Máquina de estados finitos             NVS             Almacenamiento no volátil en flash
+               Comunicación entre procesadores                        Gestión de energía (frecuencia y
+IPC                                                   PM
+               (ESP-IDF)                                              sueño)
+SDMMC          Controlador nativo de tarjetas SD      WS              WebSocket
+
+
+Notación temporal: T período, C tiempo de ejecución, D plazo, R tiempo de respuesta, U utilización.
+Los identificadores RD, EN, CU, HU y D3.x remiten al anteproyecto, al anexo de Ingeniería de
+Software y al Capítulo 3; las pruebas nuevas de este capítulo son PU-RT-xx y las decisiones D4.x.
+Las prioridades de FreeRTOS crecen con el número (0 = tarea inactiva).
+
+4.1 Enfoque del capítulo
+Este capítulo analiza el proyecto desde la materia Sistemas Operativos de Tiempo
+Real. El instrumento tiene un requisito de tiempo real estricto: procesar sin pérdidas un
+flujo continuo de 48 000 muestras por segundo. Además, convive con actividades sin
+plazo estricto: la interfaz, la escritura en la microSD, el servidor web y la supervisión. El
+objetivo es diseñar una arquitectura concurrente sobre FreeRTOS [1, 2] que garantice el
+primer requisito sin que lo afecten los demás, y demostrarlo con análisis temporal [3–6],
+simulación y pruebas.
+El punto de partida es el firmware del prototipo del curso de DSP (repositorio
+decibilimetro-iso8253, carpeta firmware/main), que ya usaba FreeRTOS con dos tareas en
+núcleos distintos.
+
+Requisitos que condicionan la arquitectura
+  Requisito            Enunciado (anteproyecto)                       Consecuencia para el RTOS
+               Tiempo real sin pérdida de bloques (0
+                                                               Plazo por bloque; aislamiento del núcleo
+RD-07          desbordes en 8 h); CPU del núcleo DSP ≤ 70
+                                                               DSP; contador de desbordes
+               %
+                                                               Período de publicación de resultados;
+RD-06          Integración de 10 a 120 s; refresco ≤ 250 ms
+                                                               latencia hasta la pantalla y la web
+RD-08          Autonomía ≥ 8 h con Wi-Fi activo                Gestión de energía compatible con el I2S
+                                                               Tarea dueña de la microSD; escrituras
+RD-09          ≥ 1000 sesiones sin corrupción ante cortes
+                                                               atómicas
+RD-10, RD-                                                     Escrituras en flash que detienen la caché:
+               Calibración persistente; OTA con reversión
+11                                                             deben programarse
+                                                               NVS y microSD; cierre ordenado ante
+RD-12          Datos conservados sin alimentación
+                                                               batería crítica
+
+
+
+4.2 Análisis del firmware previo
+El prototipo creaba dos tareas: task_i2s (prioridad 10, núcleo 0), que leía bloques de
+1024 muestras con la API I2S heredada, los convertía a float y los dejaba en un pool de 4
+buffers, y task_dsp (prioridad 9, núcleo 1), que filtraba, calculaba niveles cada 10
+bloques, los enviaba por UART y además atendía los comandos. Una tercera tarea,
+uart_rx (prioridad 5, núcleo 0), interpretaba los comandos JSON. La Tabla 4.1 resume los
+hallazgos.
+  ID                       Hallazgo                      Evidencia                Consecuencia                 Sev.
+        Pool de 4 buffers en ronda sin control de
+                                                                        Bloques corrompidos sin aviso
+H4.1    propiedad: el productor escribe antes de    main.c:94-105                                            Alta
+                                                                        cuando el DSP se atrasa
+        saber si el buffer está libre
+        Bloques descartados en silencio si la
+H4.2                                                main.c:105-107      RD-07 no es verificable              Alta
+        cola está llena; sin contador
+        E/S bloqueante (UART) dentro de la                              El tiempo de ejecución del DSP
+H4.3                                                main.c:178, 203                                          Alta
+        tarea DSP                                                       depende del enlace
+        Comandos sondeados al final de cada                             Lógica de aplicación mezclada con
+H4.4                                                main.c:188                                               Media
+        bloque dentro del DSP                                           el camino de tiempo real
+        El parámetro de calibración se guarda en
+        la variable del tiempo de integración
+H4.5                                                main.c:144, 207     Acoplamiento frágil entre comandos   Media
+        (s_avg_sec) y se usa como nivel de
+        referencia
+        El firmware no integra el L_eq de la
+                                                    main.c:170;
+H4.6    sesión: publica niveles de 200 ms y                             Imposible en un equipo autónomo      Alta
+                                                    app_config.h
+        delega el promedio en la PC
+        Buffer de transmisión estático              uart_comm.c:16;     Carrera (ventana corta) en el
+H4.7                                                                                                         Baja
+        compartido por app_main y task_dsp          main.c:293          arranque
+        Suma de cuadrados en double                                     Pérdida de precisión en
+H4.8                                                main.c:143, 173                                          Media
+        convertida a float al calcular el nivel                         integraciones largas
+        Semáforo creado y nunca usado; logs         main.c:40, 283-     Código muerto; sin diagnóstico en
+H4.9                                                                                                         Baja
+        silenciados globalmente                     286                 campo
+        Sin medición de tiempos, sin suscripción
+                                                    main.c:20;          Sin evidencia temporal; API
+H4.10   al perro guardián, API I2S heredada                                                                  Media
+                                                    sdkconfig           obsoleta
+        (driver/i2s.h), tick de 100 Hz
+
+
+           Tabla 4.1. Hallazgos en el firmware del prototipo, vistos desde el diseño concurrente.
+
+La carrera del pool de buffers
+En el prototipo, el productor toma el buffer pool[i mod 4], lo llena y recién después intenta
+encolar su puntero. Nada impide que ese buffer sea el que el consumidor está
+procesando o uno que todavía espera en la cola. Se simuló el mecanismo con el período
+real del prototipo (20 ms por bloque) y distintos tiempos de procesamiento del
+consumidor:
+    C del consumidor [ms]               5           15             19      21           25            40       60
+Bloques corrompidos (de 400)            0           0              0       321         309            200      394
+Bloques descartados (de 400)            0           0              0       15           76            196      262
+
+
+             Tabla 4.2. Simulación del pool del prototipo (rtos/analisis_temporal.py, sección 5).
+
+Mientras el consumidor tarde menos que el período, no pasa nada; pero apenas lo
+supera, la cola se llena y, con 3 bloques en cola y 1 en proceso, el buffer siguiente es
+justamente el que se está procesando: casi todos los bloques se corrompen. El defecto
+queda oculto porque el procesamiento del prototipo era liviano, pero cualquier demora en
+la escritura por UART (H4.3) lo dispara, y nada lo registra (H4.2). Es un caso típico de
+recurso compartido sin dueño explícito.
+
+4.3 Arquitectura de tareas propuesta
+Principios de diseño
+ • Un dueño por recurso. Las muestras pertenecen a T_DSP; el estado de la
+   aplicación, a T_APP; la microSD, a T_STOR. Los demás piden servicios por
+   mensajes. Así no hacen falta mutex en el camino de tiempo real y se evitan la
+   inversión de prioridades y los interbloqueos [8].
+ • Camino de tiempo real sin bloqueos. T_DSP solo se bloquea esperando datos del
+   I2S. No hace E/S, no reserva memoria dinámica, no escribe logs y no toma mutex.
+ • Mensajes por valor. Las colas transportan estructuras pequeñas copiadas, no
+   punteros a memoria compartida.
+ • Aislamiento por núcleo. El núcleo 1 queda dedicado a T_DSP; el Wi-Fi y el resto de
+   la aplicación corren en el núcleo 0.
+ • Todo se mide. Tiempos de ejecución, desbordes, pilas y uso de CPU se registran y
+   se publican.
+
+
+
+
+        Figura 4.1. Arquitectura de tareas propuesta: núcleos, tareas, colas, buzón y periféricos.
+   Tarea       Núcleo     Prio.       Activación        Período / plazo   Pila                Función
+                                                                                 Conversión, banco de filtros, Σx²,
+T_DSP             1        20     Datos del I2S        T = D = 21,3 ms    4 kB
+                                                                                 L_eq parcial
+                                                       Esporádica; ≤ 50          FSM, sesión, regla de piso,
+T_APP             0        10     Cola q_evt / q_res                      4 kB
+                                                       ms                        veredicto
+                                                                                 Dibujo de la pantalla y lectura de
+T_UI              0        8      Notificación         ≈ 235 ms           6 kB
+                                                                                 pulsadores
+                                                                                 Archivos de sesión en la
+T_STOR            0        6      Cola q_stor          Esporádica         6 kB
+                                                                                 microSD (FAT)
+T_NET             0        5      Notificación / red   Esporádica         6 kB   Servidor HTTP y WebSocket
+                                                                                 Pilas, CPU, batería, perro
+T_MON             0        2      Periódica            T=1s               3 kB
+                                                                                 guardián
+                                                                                 Pila de red (configurada en el
+Wi-Fi, lwIP       0      18–23    ESP-IDF              —                  IDF
+                                                                                 núcleo 0)
+
+
+Tabla 4.3. Tareas, núcleo, prioridad y activación. Las pilas son estimaciones iniciales; se ajustan con la marca
+                                         de agua medida (sección 4.7).
+
+Decisión D4.1: captura y procesamiento en una sola tarea. En el prototipo, la
+separación entre captura y DSP obligaba a mantener un pool intermedio, que es
+justamente donde estaba la carrera. Con el driver i2s_std de ESP-IDF 5 [2], el anillo de
+descriptores DMA ya es el buffer entre el periférico y el software: T_DSP llama a
+i2s_channel_read(), que copia 1024 muestras del anillo a un buffer propio y libera los
+descriptores. Se elimina el pool, una copia y un cambio de contexto por bloque, y la
+propiedad de los datos queda clara: el anillo es del driver y el buffer de trabajo es de
+T_DSP.
+Prioridades. En el núcleo 1, T_DSP tiene la mayor prioridad de aplicación y solo la
+superan las interrupciones, el tick y las tareas internas de ESP-IDF (IPC, esp_timer). En el
+núcleo 0 las prioridades siguen la urgencia: T_APP coordina y debe responder rápido a
+los eventos; T_UI tiene un plazo blando de refresco; T_STOR y T_NET son de fondo;
+T_MON, la más baja, sirve además como testigo: si deja de correr, hay una tarea
+acaparando el procesador.
+4.4 Comunicación y sincronización
+                                     Productor →
+  Objeto            Tipo                                    Tamaño                    Política
+                                     consumidor
+                                                                     T_DSP lee sin espera al inicio de cada
+q_cmd        Cola               T_APP → T_DSP           4 × 16 B     bloque; aplica INICIAR, DETENER,
+                                                                     CALIBRAR o PISO en el borde de bloque
+                                                                     Resultado cada 11 bloques: L_eq parcial y
+                                                                     acumulado por banda, número de bloques,
+q_res        Cola               T_DSP → T_APP           4 × 96 B
+                                                                     desbordes y C máximo. Envío sin espera; si
+                                                                     se llena, se cuenta
+                                                                     Eventos de pulsadores y comandos
+                                ISR GPIO, T_NET, T_UI
+q_evt        Cola                                       16 × 32 B    remotos; desde la ISR con
+                                → T_APP
+                                                                     xQueueSendFromISR
+                                                                     xQueueOverwrite / xQueuePeek: siempre la
+             Cola de longitud
+mbx                             T_APP → T_UI, T_NET     1 × 128 B    última instantánea, sin acumular atraso;
+             1
+                                                                     aviso con xTaskNotifyGive
+                                                                     Registros de sesión; T_STOR confirma con
+q_stor       Cola               T_APP → T_STOR          3 × 256 B
+                                                                     un evento
+             Atómicos de 32     ISR I2S, T_DSP →                     Solo un escritor por contador; lectura sin
+Contadores                                              —
+             bits               T_MON                                bloqueo
+
+
+             Tabla 4.4. Objetos de comunicación. Ninguno se comparte por puntero entre tareas.
+
+Comandos en el borde de bloque. T_DSP no tiene estados de aplicación: solo modos
+de acumulación (inactivo, midiendo, calibrando, midiendo piso). T_APP decide y envía un
+comando; T_DSP lo aplica al comenzar el bloque siguiente, reinicia filtros y acumuladores
+si corresponde, y descarta los 0,5 s iniciales definidos en el Capítulo 3. La configuración
+que T_DSP necesita (tiempo de integración, constante K, correcciones C_b) viaja dentro
+del comando de inicio: T_DSP nunca lee la configuración global y no hay datos
+compartidos que proteger.
+Sin inversión de prioridades. Como cada recurso tiene un único dueño, en el diseño no
+hay mutex entre tareas de distinta prioridad. Si en el futuro hiciera falta uno, por ejemplo
+para un bus compartido, se usará un mutex de FreeRTOS, que implementa herencia de
+prioridad [8], y nunca un semáforo binario. La pantalla (SPI2) y la microSD (SDMMC) usan
+controladores distintos del ESP32-S3, así que tampoco comparten bus.
+Precisión de la integración. T_DSP acumula Σx² por bloque en float y lo vuelca en
+acumuladores double por banda (corrige H4.8). La sesión completa, de hasta 120 s, se
+integra en el firmware (corrige H4.6) y el resultado parcial viaja en q_res.
+
+4.5 Análisis temporal
+Presupuesto de la tarea DSP
+El período de T_DSP es el de un bloque de entrada, T = 1024 / 48 000 = 21,33 ms, y su
+plazo es igual al período (D = T). El tiempo de ejecución se estimó a partir del costo del
+banco de filtros del Capítulo 3 (3,32 millones de multiplicaciones por segundo), con 10
+ciclos por multiplicación-acumulación a 240 MHz, más la conversión de las muestras, la
+acumulación y una sobrecarga fija:
+                         Componente                                Ciclos por bloque    Tiempo a 240 MHz
+Banco de filtros y antialias (70 827 multiplicaciones × 10)             708 267              2,95 ms
+Conversión de 1024 muestras de 24 bits a float                           6 144               0,03 ms
+Cuadrado y suma de 2032 muestras de banda                                8 128               0,03 ms
+Sobrecarga (lectura I2S, colas, contadores)                             20 000               0,08 ms
+C nominal / C pesimista (× 2)                                           742 539         3,09 ms / 6,19 ms
+
+
+Tabla 4.5. Presupuesto de ejecución de T_DSP por bloque. El factor 2 cubre fallos de caché y contención de
+                                 bus; el valor real se mide con PU-RT-02.
+
+                  U_DSP = C / T = 3,09 / 21,33 = 14,5 % (pesimista: 29,0 %)                               (1)
+
+Tiempo de respuesta en el núcleo 1
+Para T_DSP se aplica el análisis de tiempo de respuesta de prioridades fijas [4, 5]: el
+tiempo de respuesta R es el menor punto fijo de la ecuación
+                                        R = C + Σ_j ⌈R / T_j⌉ · C_j                                       (2)
+donde j recorre las actividades de mayor prioridad en el mismo núcleo: el tick de
+FreeRTOS (1 kHz, ≈ 3 µs), la ISR del DMA del I2S (una por descriptor, cada 10,67 ms, ≈ 5
+µs) y las tareas internas IPC / esp_timer (se supone una activación de 20 µs cada 10 ms).
+Sus costos son estimaciones que deben medirse. El resultado:
+     Caso               C [ms]           R [ms]           D [ms]         Holgura [ms]     U total núcleo 1
+Nominal                  3,09             3,13            21,33             18,20              15,0 %
+Pesimista                6,19             6,23            21,33             15,10              29,6 %
+
+
+   Tabla 4.6. Análisis de tiempo de respuesta de T_DSP. Las interferencias suman 0,55 % de utilización.
+
+El plazo se cumple con holgura incluso en el caso pesimista, y la utilización queda muy
+por debajo del 70 % que fija RD-07. Como el núcleo 1 tiene una sola tarea de aplicación,
+el criterio de Liu y Layland [3] es trivial; el análisis exacto de la ecuación (2) es el que
+aporta información. La Figura 4.2 muestra el resultado a escala.
+ Figura 4.2. Cronograma de dos bloques a escala: DMA continuo, ISR por descriptor, T_DSP y actividad del
+                                               núcleo 0.
+
+Latencias de extremo a extremo
+                Trayecto                              Cota                                Requisito
+Intervalo entre resultados publicados 11 bloques = 234,7 ms                       RD-06: ≤ 250 ms
+Comando de T_APP hasta que T_DSP                                                  Respuesta inmediata
+                                      ≤ T + C = 27,5 ms (pesimista)
+lo aplica                                                                         percibida
+                                      ≤ 235 + 6,2 + 40 (dibujo, a medir) ≈
+Muestra hasta la pantalla                                                         Indicación fluida
+                                      281 ms
+                                                                                  Respuesta inmediata
+Pulsador hasta el cambio de estado       ≤ 20 ms (antirrebote) + T_APP
+                                                                                  percibida
+
+
+     Tabla 4.7. Latencias principales. El tiempo de dibujo depende de la biblioteca gráfica y se medirá.
+
+
+4.6 Anillo DMA, flash y gestión de energía
+Dimensionamiento del anillo DMA
+El anillo DMA absorbe cualquier intervalo en el que T_DSP no pueda ejecutarse. Si el
+núcleo 1 se detiene durante S milisegundos, el anillo de Q muestras no desborda mientras
+se cumpla:
+                           Q ≥ f_s · (S + C)       ⇒    S_máx = Q / f_s − C                                (3)
+    Descriptores ×
+                               Q         Capacidad        Memoria      S_máx nominal S_máx pesimista
+      muestras
+       4 × 512               2048         42,7 ms           8 kB           39,6 ms              36,5 ms
+       8 × 512               4096         85,3 ms           16 kB          82,2 ms              79,1 ms
+      12 × 512               6144         128,0 ms          24 kB          124,9 ms             121,8 ms
+      16 × 512               8192         170,7 ms          32 kB          167,6 ms             164,5 ms
+
+
+  Tabla 4.8. Detención máxima tolerable según el tamaño del anillo (512 muestras de 32 bits = 2048 B por
+                          descriptor, dentro del máximo de 4092 B del GDMA).
+    Figura 4.3. Simulación de la ocupación del anillo con una detención de 100 ms del núcleo 1: con 8
+      descriptores se pierden 1024 muestras; con 16, la ocupación llega al 62 % y no hay pérdidas.
+
+Decisión D4.2: anillo de 16 descriptores de 512 muestras (171 ms, 32 kB de RAM
+interna). Tolera detenciones de hasta 164 ms aun con el C pesimista, a un costo de
+memoria menor que el 7 % de la SRAM interna del ESP32-S3.
+
+Escrituras en flash
+En el ESP32-S3, mientras se borra o escribe la flash externa, la caché de código se
+deshabilita en ambos núcleos: solo puede ejecutarse código en IRAM [2]. La auto-
+suspensión de operaciones largas existe en ESP-IDF 5.4, pero es experimental y
+depende del chip de flash, así que no se usa. El borrado de un sector de 4 kB tarda
+decenas de milisegundos y, en el peor caso, cientos. Se adoptan tres medidas:
+ • Decisión D4.3: las escrituras en NVS (calibración, piso de ruido, configuración) y la
+   OTA solo se permiten en los estados REPOSO y ACTUALIZANDO. La FSM de
+   T_APP rechaza cualquier escritura en flash durante MIDIENDO, CALIBRANDO o
+   MIDIENDO_PISO; el valor calculado se guarda al volver a REPOSO.
+ • La ISR del I2S y el manejador del GDMA se compilan en IRAM
+   (CONFIG_I2S_ISR_IRAM_SAFE). Así el DMA sigue llenando el anillo durante una
+   operación de flash, y el anillo de 171 ms absorbe la detención de T_DSP.
+ • El lazo de filtrado y sus coeficientes se ubican en IRAM y DRAM internas, y los
+   buffers de audio nunca en PSRAM. Se evitan los fallos de caché, que son la principal
+   fuente de variación de C.
+La microSD usa el controlador SDMMC y no la flash del programa: escribir en ella no
+detiene la caché. Aun así, la sesión se escribe al terminar (estado RESULTADO) y no
+durante la medición.
+Gestión de energía
+Para cumplir RD-08, en REPOSO el equipo reduce la frecuencia de CPU y entra en sueño
+liviano automático (CONFIG_PM_ENABLE). Durante MIDIENDO, CALIBRANDO y
+MIDIENDO_PISO, T_APP toma un candado de gestión de energía (esp_pm_lock_acquire
+con ESP_PM_CPU_FREQ_MAX y sin sueño liviano) para que el reloj del I2S y el tiempo
+de ejecución de T_DSP no cambien. Es la decisión D4.4.
+
+4.7 Robustez y supervisión
+       Mecanismo                            Implementación                                    Reacción
+                                                                               La sesión se marca "con pérdidas" y se
+                            Callback on_recv_q_ovf del driver i2s_std →
+Desborde del anillo DMA                                                        informa; nunca se descarta en silencio
+                            contador atómico
+                                                                               (corrige H4.2)
+                            T_DSP y T_APP suscritas al TWDT
+                                                                               Pánico controlado, volcado de memoria
+Perro guardián de tareas    (esp_task_wdt_add); reinicio del WDT en cada
+                                                                               y reinicio
+                            ciclo; plazo de 2 s
+                            CONFIG_FREERTOS_CHECK_STACKOVERFLO
+Desborde de pila            W_CANARY y marca de agua periódica en              Alarma si la reserva baja del 25 %
+                            T_MON
+                            CONFIG_FREERTOS_GENERATE_RUN_TIME_
+Uso de CPU                                                                     Verificación de RD-07 en EN-06
+                            STATS; T_MON publica el porcentaje por tarea
+Tiempo de ejecución de      esp_cpu_get_cycle_count() al inicio y al fin de    Publicado en q_res; alarma si C > 10
+T_DSP                       cada bloque; máximo e histograma                   ms
+                            CONFIG_ESP_COREDUMP_ENABLE_TO_FLAS                 Volcado que se descarga por el panel
+Fallas fatales
+                            H                                                  técnico
+                            Detector de brown-out y lectura de batería en      Batería crítica: T_APP cierra la sesión y
+Caída de tensión
+                            T_MON                                              archivos y apaga (estado APAGADO)
+                                                                               La sesión queda en RAM y se reintenta;
+Falla de la microSD         T_STOR informa el error por evento
+                                                                               T_DSP nunca espera a T_STOR
+
+
+                           Tabla 4.9. Mecanismos de supervisión y reacción ante fallas.
+
+Configuración de FreeRTOS y ESP-IDF
+                 Opción (sdkconfig)                         Valor                         Motivo
+                                                                    Resolución de 1 ms para esperas y antirrebote (el
+CONFIG_FREERTOS_HZ                                      1000
+                                                                    prototipo usaba 100)
+CONFIG_ESP_WIFI_TASK_PINNED_TO_CORE_0                   y           Wi-Fi fuera del núcleo de tiempo real
+CONFIG_I2S_ISR_IRAM_SAFE                                y           DMA operativo durante escrituras en flash
+CONFIG_FREERTOS_CHECK_STACKOVERFLO
+                                                        y           Detección de desbordes de pila
+W_CANARY
+CONFIG_FREERTOS_GENERATE_RUN_TIME_S
+                                                        y           Uso de CPU por tarea
+TATS
+CONFIG_ESP_TASK_WDT_PANIC                               y           Una tarea colgada reinicia el equipo
+CONFIG_ESP_COREDUMP_ENABLE_TO_FLASH                     y           Diagnóstico posterior a fallas
+                                                                    Sueño liviano en REPOSO (con candado durante
+CONFIG_PM_ENABLE                                        y
+                                                                    la medición)
+
+
+           Tabla 4.10. Opciones de configuración relevantes (nombres verificados en ESP-IDF 5.4).
+4.8 Plan de verificación
+        ID                          Procedimiento                           Criterio de aceptación           Verifica
+                 Pruebas unitarias de la FSM de T_APP en el host
+                                                                         100 % de las transiciones     D4.3 · CU-01, CU-
+PU-RT-01         (Unity): todas las transiciones de la tabla del
+                                                                         cubiertas                     02, CU-10
+                 anexo, incluidas las escrituras en flash prohibidas
+                 Medición del tiempo de ejecución de T_DSP con
+PU-RT-02         contador de ciclos en 10⁵ bloques, con y sin Wi-Fi      C máx ≤ 6,2 ms; R ≤ D         RD-07
+                 activo
+                                                                         100 ms: 0 desbordes; 200
+                 Inyección de una espera activa en T_DSP de 100
+PU-RT-03                                                                 ms: desborde contado y        RD-07 · D4.2
+                 ms y de 200 ms
+                                                                         sesión marcada
+                                                                         0 desbordes; C máx de
+                 Carga de comunicaciones durante una medición: 4
+PU-RT-04                                                                 T_DSP sin cambio              RD-07 · EN-09
+                 clientes WebSocket y descarga de CSV
+                                                                         significativo
+                 Pedido de escritura en NVS u OTA durante                Rechazado por la FSM; sin
+PU-RT-05                                                                                               RD-11 · D4.3
+                 MIDIENDO                                                desbordes
+                                                                         Sin bloqueo de T_DSP ni de
+                 Retiro de la microSD durante la escritura de una
+PU-RT-06                                                                 T_APP; sesión retenida y      RD-09
+                 sesión
+                                                                         reescrita
+                 Funcionamiento continuo de 8 h con registro de          0 desbordes; CPU ≤ 70 %;
+EN-06                                                                                                  RD-06, RD-07
+                 desbordes, CPU, pilas y latencia                        refresco ≤ 250 ms
+EN-08 / EN-      Cortes de energía durante la escritura; OTA válida
+                                                                         Ver anteproyecto              RD-09, RD-11
+10               y corrupta
+
+
+                 Tabla 4.11. Pruebas de este capítulo y ensayos del anteproyecto relacionados.
+
+
+4.9 Conclusiones y decisiones
+   ID                             Decisión                                                 Justificación
+             Captura y DSP en una sola tarea (T_DSP) sobre             Elimina el pool y su carrera (H4.1); propiedad de
+D4.1
+             el anillo DMA de i2s_std                                  datos explícita
+                                                                       Tolera detenciones de 164 ms con C pesimista;
+D4.2         Anillo DMA de 16 × 512 muestras (171 ms, 32 kB)
+                                                                       simulación sin pérdidas a 100 ms
+             Escrituras en flash (NVS, OTA) solo fuera de los
+D4.3                                                                   La flash detiene la caché de ambos núcleos
+             estados de medición
+             Candado de gestión de energía durante la
+D4.4                                                                   Reloj I2S y C estables; autonomía (RD-08)
+             medición; sueño liviano en REPOSO
+             Un dueño por recurso y mensajes por valor; sin
+D4.5                                                                   Sin inversión de prioridades ni interbloqueos
+             mutex en el camino de tiempo real
+             Núcleo 1 dedicado a T_DSP (prioridad 20); Wi-Fi y
+D4.6                                                                   R ≤ 6,2 ms frente a D = 21,3 ms; U ≤ 30 %
+             aplicación en el núcleo 0
+             L_eq de sesión integrado en el firmware con
+D4.7                                                                   Equipo autónomo (H4.6); precisión (H4.8)
+             acumuladores double
+             Supervisión: contador de desbordes, TWDT,
+D4.8         canario de pila, estadísticas de CPU, volcado de          RD-07 verificable; diagnóstico en campo
+             memoria
+
+
+
+Pendientes
+ • Medir en el ESP32-S3 los tiempos reales: C de T_DSP, costos de las interrupciones y
+   tiempo de dibujo (PU-RT-02). Las cifras de este capítulo son estimaciones con
+   márgenes explícitos.
+ • Elegir la biblioteca gráfica y verificar que T_UI cumpla su plazo blando sin afectar a
+   T_APP.
+ • Confirmar el comportamiento del Wi-Fi en modo punto de acceso con varios clientes
+   (PU-RT-04, EN-09).
+ • Propagar al anexo de Ingeniería de Software las pruebas PU-RT y la restricción de
+   escrituras en flash.
+
+Historial de revisión
+  Versión                                                    Cambios
+0.1          Borrador inicial (elefante: redactor con el contexto completo del proyecto).
+
+
+
+
+Referencias del capítulo
+[1] Barry, R. Mastering the FreeRTOS Real Time Kernel — A Hands-On Tutorial Guide. Real Time
+Engineers Ltd.
+[2] Espressif Systems. ESP-IDF Programming Guide v5.4: I2S (i2s_std), FreeRTOS (SMP), SPI
+Flash (restricciones de concurrencia), Task Watchdog Timer, Power Management.
+[3] Liu, C. L.; Layland, J. W. Scheduling algorithms for multiprogramming in a hard-real-time
+environment. Journal of the ACM, 20(1), 1973.
+[4] Joseph, M.; Pandya, P. Finding response times in a real-time system. The Computer Journal,
+29(5), 1986.
+[5] Audsley, N.; Burns, A.; Richardson, M.; Tindell, K.; Wellings, A. Applying new scheduling theory
+to static priority pre-emptive scheduling. Software Engineering Journal, 8(5), 1993.
+[6] Buttazzo, G. Hard Real-Time Computing Systems, 3.ª ed. Springer, 2011.
+[7] Espressif Systems. ESP32-S3 Technical Reference Manual (GDMA, I2S, caché).
+[8] Sha, L.; Rajkumar, R.; Lehoczky, J. Priority inheritance protocols: an approach to real-time
+synchronization. IEEE Transactions on Computers, 39(9), 1990.
+

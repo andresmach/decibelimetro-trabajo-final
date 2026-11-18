@@ -1,0 +1,40 @@
+@startuml casos_de_uso
+' Diagrama de casos de uso — Analizador de ruido ambiente ISO 8253-1
+left to right direction
+skinparam actorStyle default
+skinparam usecase { BackgroundColor #FFFBE6
+  BorderColor #B07A00 }
+
+actor "Fonoaudiólogo/a" as Fono
+actor "Técnico/a" as Tec
+actor "Calibrador acústico" as Cal
+actor "Servidor de gestión" as Srv
+Tec --|> Fono
+
+rectangle "Analizador de ruido ambiente ISO 8253-1" {
+  usecase "CU-01\nCalibrar instrumento" as CU01
+  usecase "CU-02\nMedir cabina" as CU02
+  usecase "CU-03\nEvaluar conformidad ISO" as CU03
+  usecase "CU-04\nVer medición en tiempo real" as CU04
+  usecase "CU-05\nGenerar informe de sesión" as CU05
+  usecase "CU-06\nConsultar historial" as CU06
+  usecase "CU-07\nConfigurar instrumento" as CU07
+  usecase "CU-08\nActualizar firmware (OTA)" as CU08
+  usecase "CU-09\nExportar registros" as CU09
+  usecase "CU-10\nMedir piso de ruido propio" as CU10
+}
+
+Fono --> CU01
+Fono --> CU02
+Fono --> CU04
+Fono --> CU06
+Fono --> CU09
+Tec --> CU07
+Tec --> CU08
+Tec --> CU10
+CU01 -- Cal
+CU05 -- Srv
+CU02 ..> CU03 : <<include>>
+CU05 ..> CU02 : <<extend>>
+CU05 ..> CU06 : <<extend>>
+@enduml

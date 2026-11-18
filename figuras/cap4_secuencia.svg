@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1110" viewBox="0 0 1400 1110" font-family="Arial, Helvetica, sans-serif">
+<rect width="1400" height="1110" fill="#fff"/>
+<text x="700" y="34" font-size="22" text-anchor="middle" fill="#222" font-weight="bold">Secuencia de una medición de cabina (CU-02)</text>
+<rect x="5" y="60" width="170" height="54" rx="6" fill="#eef5fb" stroke="#1e5e9f" stroke-width="2"/>
+<text x="90" y="84" font-size="16" text-anchor="middle" fill="#222" font-weight="bold">Pulsador</text>
+<text x="90" y="104" font-size="13" text-anchor="middle" fill="#555" font-weight="normal">ISR GPIO</text>
+<line x1="90" y1="114" x2="90" y2="1080" stroke="#999" stroke-width="1.5" stroke-dasharray="5,5"/>
+<rect x="245" y="60" width="170" height="54" rx="6" fill="#eef5fb" stroke="#1e5e9f" stroke-width="2"/>
+<text x="330" y="84" font-size="16" text-anchor="middle" fill="#222" font-weight="bold">T_APP</text>
+<text x="330" y="104" font-size="13" text-anchor="middle" fill="#555" font-weight="normal">núcleo 0 · p10</text>
+<line x1="330" y1="114" x2="330" y2="1080" stroke="#999" stroke-width="1.5" stroke-dasharray="5,5"/>
+<rect x="505" y="60" width="170" height="54" rx="6" fill="#eef5fb" stroke="#1e5e9f" stroke-width="2"/>
+<text x="590" y="84" font-size="16" text-anchor="middle" fill="#222" font-weight="bold">T_DSP</text>
+<text x="590" y="104" font-size="13" text-anchor="middle" fill="#555" font-weight="normal">núcleo 1 · p20</text>
+<line x1="590" y1="114" x2="590" y2="1080" stroke="#999" stroke-width="1.5" stroke-dasharray="5,5"/>
+<rect x="775" y="60" width="170" height="54" rx="6" fill="#eef5fb" stroke="#1e5e9f" stroke-width="2"/>
+<text x="860" y="84" font-size="16" text-anchor="middle" fill="#222" font-weight="bold">T_UI / T_NET</text>
+<text x="860" y="104" font-size="13" text-anchor="middle" fill="#555" font-weight="normal">núcleo 0 · p8 / p5</text>
+<line x1="860" y1="114" x2="860" y2="1080" stroke="#999" stroke-width="1.5" stroke-dasharray="5,5"/>
+<rect x="1005" y="60" width="170" height="54" rx="6" fill="#eef5fb" stroke="#1e5e9f" stroke-width="2"/>
+<text x="1090" y="84" font-size="16" text-anchor="middle" fill="#222" font-weight="bold">T_STOR</text>
+<text x="1090" y="104" font-size="13" text-anchor="middle" fill="#555" font-weight="normal">núcleo 0 · p6</text>
+<line x1="1090" y1="114" x2="1090" y2="1080" stroke="#999" stroke-width="1.5" stroke-dasharray="5,5"/>
+<rect x="1215" y="60" width="170" height="54" rx="6" fill="#eef5fb" stroke="#1e5e9f" stroke-width="2"/>
+<text x="1300" y="84" font-size="16" text-anchor="middle" fill="#222" font-weight="bold">NVS / flash</text>
+<line x1="1300" y1="114" x2="1300" y2="1080" stroke="#999" stroke-width="1.5" stroke-dasharray="5,5"/>
+<line x1="90" y1="150" x2="330" y2="150" stroke="#222" stroke-width="2"/>
+<polygon points="330,150 317,144 317,156" fill="#222"/>
+<text x="210.0" y="143" font-size="14" text-anchor="middle" fill="#222" font-weight="normal">q_evt: MEDIR</text>
+<rect x="260" y="178" width="230" height="44" fill="#fff2cc" stroke="#b07a00" stroke-width="1.5"/>
+<text x="268" y="197" font-size="13.5" text-anchor="start" fill="#333" font-weight="normal">REPOSO → ESPERA (3 s)</text>
+<text x="268" y="215" font-size="13.5" text-anchor="start" fill="#333" font-weight="normal">candado PM: CPU_FREQ_MAX</text>
+<line x1="330" y1="254" x2="590" y2="254" stroke="#222" stroke-width="2"/>
+<polygon points="590,254 577,248 577,260" fill="#222"/>
+<text x="460.0" y="247" font-size="14" text-anchor="middle" fill="#222" font-weight="normal">q_cmd: PREPARAR</text>
+<rect x="510" y="272" width="250" height="44" fill="#fff7e6" stroke="#c77700" stroke-width="1.5"/>
+<text x="518" y="291" font-size="13.5" text-anchor="start" fill="#333" font-weight="normal">i2s_channel_enable()</text>
+<text x="518" y="309" font-size="13.5" text-anchor="start" fill="#333" font-weight="normal">filtra sin acumular (transitorio)</text>
+<rect x="260" y="342" width="200" height="26" fill="#fff2cc" stroke="#b07a00" stroke-width="1.5"/>
+<text x="268" y="361" font-size="13.5" text-anchor="start" fill="#333" font-weight="normal">temporizador 3 s</text>
+<line x1="330" y1="394" x2="590" y2="394" stroke="#222" stroke-width="2"/>
+<polygon points="590,394 577,388 577,400" fill="#222"/>
+<text x="460.0" y="387" font-size="14" text-anchor="middle" fill="#222" font-weight="normal">q_cmd: INICIAR (T_int, K, C_b)</text>
+<rect x="510" y="412" width="250" height="26" fill="#fff7e6" stroke="#c77700" stroke-width="1.5"/>
+<text x="518" y="431" font-size="13.5" text-anchor="start" fill="#333" font-weight="normal">modo acumular: Σx² por banda</text>
+<line x1="590" y1="474" x2="330" y2="474" stroke="#1e5e9f" stroke-width="2" stroke-dasharray="7,5"/>
+<polygon points="330,474 343,468 343,480" fill="#1e5e9f"/>
+<text x="460.0" y="467" font-size="14" text-anchor="middle" fill="#1e5e9f" font-weight="normal">q_res: L_eq parcial #1 (cada 11 bloques ≈ 235 ms)</text>
+<line x1="330" y1="506" x2="860" y2="506" stroke="#b07a00" stroke-width="2" stroke-dasharray="7,5"/>
+<polygon points="860,506 847,500 847,512" fill="#b07a00"/>
+<text x="595.0" y="499" font-size="14" text-anchor="middle" fill="#b07a00" font-weight="normal">mbx + notificación</text>
+<line x1="590" y1="550" x2="330" y2="550" stroke="#1e5e9f" stroke-width="2" stroke-dasharray="7,5"/>
+<polygon points="330,550 343,544 343,556" fill="#1e5e9f"/>
+<text x="460.0" y="543" font-size="14" text-anchor="middle" fill="#1e5e9f" font-weight="normal">q_res: L_eq parcial #2 (cada 11 bloques ≈ 235 ms)</text>
+<line x1="330" y1="582" x2="860" y2="582" stroke="#b07a00" stroke-width="2" stroke-dasharray="7,5"/>
+<polygon points="860,582 847,576 847,588" fill="#b07a00"/>
+<text x="595.0" y="575" font-size="14" text-anchor="middle" fill="#b07a00" font-weight="normal">mbx + notificación</text>
+<text x="590" y="626" font-size="15" text-anchor="middle" fill="#555" font-weight="normal">… (un resultado cada 235 ms durante T_int)</text>
+<line x1="590" y1="660" x2="330" y2="660" stroke="#1e5e9f" stroke-width="2"/>
+<polygon points="330,660 343,654 343,666" fill="#1e5e9f"/>
+<text x="460.0" y="653" font-size="14" text-anchor="middle" fill="#1e5e9f" font-weight="normal">q_res: final (L_eq de sesión, desbordes, C máx.)</text>
+<rect x="260" y="678" width="250" height="44" fill="#fff2cc" stroke="#b07a00" stroke-width="1.5"/>
+<text x="268" y="697" font-size="13.5" text-anchor="start" fill="#333" font-weight="normal">CU-03: regla de piso y veredicto</text>
+<text x="268" y="715" font-size="13.5" text-anchor="start" fill="#333" font-weight="normal">MIDIENDO → RESULTADO</text>
+<line x1="330" y1="750" x2="590" y2="750" stroke="#222" stroke-width="2"/>
+<polygon points="590,750 577,744 577,756" fill="#222"/>
+<text x="460.0" y="743" font-size="14" text-anchor="middle" fill="#222" font-weight="normal">q_cmd: REPOSO</text>
+<rect x="510" y="768" width="250" height="26" fill="#fff7e6" stroke="#c77700" stroke-width="1.5"/>
+<text x="518" y="787" font-size="13.5" text-anchor="start" fill="#333" font-weight="normal">i2s_channel_disable()</text>
+<line x1="330" y1="830" x2="860" y2="830" stroke="#222" stroke-width="2"/>
+<polygon points="860,830 847,824 847,836" fill="#222"/>
+<text x="595.0" y="823" font-size="14" text-anchor="middle" fill="#222" font-weight="normal">mbx: veredicto APTA / NO APTA</text>
+<line x1="330" y1="870" x2="1090" y2="870" stroke="#222" stroke-width="2"/>
+<polygon points="1090,870 1077,864 1077,876" fill="#222"/>
+<text x="710.0" y="863" font-size="14" text-anchor="middle" fill="#222" font-weight="normal">q_stor: registro de sesión</text>
+<rect x="1005" y="888" width="190" height="44" fill="#e5f4e8" stroke="#2e7d32" stroke-width="1.5"/>
+<text x="1013" y="907" font-size="13.5" text-anchor="start" fill="#333" font-weight="normal">escritura FAT en microSD</text>
+<text x="1013" y="925" font-size="13.5" text-anchor="start" fill="#333" font-weight="normal">(no detiene la caché)</text>
+<line x1="1090" y1="960" x2="330" y2="960" stroke="#222" stroke-width="2" stroke-dasharray="7,5"/>
+<polygon points="330,960 343,954 343,966" fill="#222"/>
+<text x="710.0" y="953" font-size="14" text-anchor="middle" fill="#222" font-weight="normal">q_evt: GUARDADA</text>
+<rect x="260" y="988" width="250" height="26" fill="#fff2cc" stroke="#b07a00" stroke-width="1.5"/>
+<text x="268" y="1007" font-size="13.5" text-anchor="start" fill="#333" font-weight="normal">libera candado PM → REPOSO</text>
+<line x1="330" y1="1050" x2="1300" y2="1050" stroke="#d62728" stroke-width="2"/>
+<polygon points="1300,1050 1287,1044 1287,1056" fill="#d62728"/>
+<text x="815.0" y="1043" font-size="14" text-anchor="middle" fill="#d62728" font-weight="normal">solo en REPOSO: guardar calibración / piso</text>
+<text x="700" y="1102" font-size="14" text-anchor="middle" fill="#333" font-weight="normal">Línea llena: mensaje con espera del receptor; línea de trazos: mensaje sin espera del emisor (xQueueSend con plazo 0 o xQueueOverwrite).</text>
+</svg>

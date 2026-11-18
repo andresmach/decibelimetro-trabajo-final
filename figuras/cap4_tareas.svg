@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="960" viewBox="0 0 1400 960" font-family="Arial, Helvetica, sans-serif">
+<rect width="1400" height="960" fill="#fff"/>
+<rect x="20" y="70" width="470" height="650" rx="14" fill="#fff7e6" stroke="#c77700" stroke-width="3"/>
+<text x="255" y="102" font-size="21" text-anchor="middle" fill="#7a4800" font-weight="bold">Núcleo 1 · tiempo real estricto</text>
+<rect x="520" y="70" width="860" height="650" rx="14" fill="#eef5fb" stroke="#1e5e9f" stroke-width="3"/>
+<text x="950" y="102" font-size="21" text-anchor="middle" fill="#1e5e9f" font-weight="bold">Núcleo 0 · aplicación, interfaz y comunicaciones</text>
+<text x="700" y="40" font-size="23" text-anchor="middle" fill="#222" font-weight="bold">Arquitectura de tareas del firmware (FreeRTOS SMP, ESP32-S3)</text>
+<rect x="40" y="790" width="200" height="70" rx="8" fill="#dceaf7" stroke="#1e5e9f" stroke-width="2"/>
+<text x="140.0" y="820.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">Micrófono</text>
+<text x="140.0" y="842.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">ICS-43434 · I2S</text>
+<rect x="560" y="790" width="150" height="70" rx="8" fill="#f2f2f2" stroke="#666" stroke-width="2"/>
+<text x="635.0" y="820.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">Pulsadores</text>
+<text x="635.0" y="842.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">GPIO</text>
+<rect x="730" y="790" width="150" height="70" rx="8" fill="#f2f2f2" stroke="#666" stroke-width="2"/>
+<text x="805.0" y="820.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">Pantalla TFT</text>
+<text x="805.0" y="842.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">SPI2</text>
+<rect x="900" y="790" width="150" height="70" rx="8" fill="#f2f2f2" stroke="#666" stroke-width="2"/>
+<text x="975.0" y="820.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">microSD</text>
+<text x="975.0" y="842.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">SDMMC</text>
+<rect x="1070" y="790" width="150" height="70" rx="8" fill="#f2f2f2" stroke="#666" stroke-width="2"/>
+<text x="1145.0" y="820.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">Wi-Fi</text>
+<text x="1145.0" y="842.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">radio</text>
+<rect x="1230" y="790" width="140" height="70" rx="8" fill="#f2f2f2" stroke="#666" stroke-width="2"/>
+<text x="1300.0" y="820.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">Batería</text>
+<text x="1300.0" y="842.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">ADC</text>
+<rect x="50" y="560" width="410" height="120" rx="8" fill="#fff" stroke="#c77700" stroke-width="2"/>
+<text x="255.0" y="604.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">I2S RX + GDMA</text>
+<text x="255.0" y="626.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">anillo de 16 × 512 muestras (171 ms)</text>
+<text x="255.0" y="648.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">ISR en IRAM · on_recv_q_ovf → contador</text>
+<rect x="50" y="200" width="410" height="250" rx="8" fill="#fff" stroke="#c77700" stroke-width="2.5"/>
+<text x="255.0" y="276.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">T_DSP · prioridad 20</text>
+<text x="255.0" y="298.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">bloque de 1024 muestras (21,3 ms)</text>
+<text x="255.0" y="320.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">conversión → banco multitasa</text>
+<text x="255.0" y="342.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">Σx² por banda → Leq parcial</text>
+<text x="255.0" y="364.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">sin E/S, sin malloc, sin log</text>
+<text x="255.0" y="386.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">código y datos en IRAM/DRAM</text>
+<polyline points="140,790 140,682" fill="none" stroke="#333" stroke-width="2.2"/>
+<polygon points="140,682 146.5,695.0 133.5,695.0" fill="#333"/>
+<polyline points="255,560 255,452" fill="none" stroke="#333" stroke-width="2.2"/>
+<polygon points="255,452 261.5,465.0 248.5,465.0" fill="#333"/>
+<text x="265" y="512" font-size="15" text-anchor="start" fill="#7a4800" font-weight="normal" font-style="italic">i2s_channel_read()</text>
+<rect x="560" y="150" width="260" height="150" rx="8" fill="#fff" stroke="#1e5e9f" stroke-width="2.5"/>
+<text x="690.0" y="198.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">T_APP · prioridad 10</text>
+<text x="690.0" y="220.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">máquina de estados</text>
+<text x="690.0" y="242.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">sesión, veredicto, reglas</text>
+<text x="690.0" y="264.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">único dueño del estado</text>
+<rect x="1090" y="150" width="270" height="90" rx="8" fill="#fdecea" stroke="#d62728" stroke-width="2"/>
+<text x="1225.0" y="190.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">NVS (flash)</text>
+<text x="1225.0" y="212.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">escritura solo fuera de MIDIENDO</text>
+<polyline points="820,190 1088,190" fill="none" stroke="#d62728" stroke-width="2.2" stroke-dasharray="7,5"/>
+<polygon points="1088,190 1075.0,196.5 1075.0,183.5" fill="#d62728"/>
+<text x="955" y="182" font-size="14" text-anchor="middle" fill="#d62728" font-weight="normal">calibración, piso, config.</text>
+<rect x="560" y="570" width="150" height="110" rx="8" fill="#fff" stroke="#1e5e9f" stroke-width="2"/>
+<text x="635.0" y="609.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">ISR GPIO</text>
+<text x="635.0" y="631.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">antirrebote</text>
+<text x="635.0" y="653.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">→ evento</text>
+<rect x="730" y="570" width="150" height="110" rx="8" fill="#fff" stroke="#1e5e9f" stroke-width="2"/>
+<text x="805.0" y="609.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">T_UI · p8</text>
+<text x="805.0" y="631.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">dibujo por</text>
+<text x="805.0" y="653.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">notificación</text>
+<rect x="900" y="570" width="150" height="110" rx="8" fill="#fff" stroke="#1e5e9f" stroke-width="2"/>
+<text x="975.0" y="609.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">T_STOR · p6</text>
+<text x="975.0" y="631.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">dueño de la</text>
+<text x="975.0" y="653.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">microSD</text>
+<rect x="1070" y="570" width="150" height="110" rx="8" fill="#fff" stroke="#1e5e9f" stroke-width="2"/>
+<text x="1145.0" y="609.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">T_NET · p5</text>
+<text x="1145.0" y="631.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">HTTP + WS</text>
+<text x="1145.0" y="653.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">Wi-Fi/lwIP (18–23)</text>
+<rect x="1230" y="570" width="140" height="110" rx="8" fill="#fff" stroke="#1e5e9f" stroke-width="2"/>
+<text x="1300.0" y="609.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">T_MON · p2</text>
+<text x="1300.0" y="631.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">pila, CPU,</text>
+<text x="1300.0" y="653.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">batería, WDT</text>
+<rect x="490" y="186" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
+<rect x="506" y="186" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
+<rect x="522" y="186" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
+<rect x="538" y="186" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
+<text x="522.0" y="179" font-size="14" text-anchor="middle" fill="#1e5e9f" font-weight="bold">q_cmd</text>
+<polyline points="560,199 462,199" fill="none" stroke="#1e5e9f" stroke-width="2.2"/>
+<polygon points="462,199 475.0,192.5 475.0,205.5" fill="#1e5e9f"/>
+<rect x="490" y="280" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
+<rect x="506" y="280" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
+<rect x="522" y="280" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
+<rect x="538" y="280" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
+<text x="522.0" y="273" font-size="14" text-anchor="middle" fill="#1e5e9f" font-weight="bold">q_res</text>
+<polyline points="462,293 558,293" fill="none" stroke="#1e5e9f" stroke-width="2.2"/>
+<polygon points="558,293 545.0,299.5 545.0,286.5" fill="#1e5e9f"/>
+<rect x="600" y="420" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
+<rect x="616" y="420" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
+<rect x="632" y="420" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
+<rect x="648" y="420" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
+<rect x="664" y="420" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
+<rect x="680" y="420" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
+<text x="648.0" y="413" font-size="14" text-anchor="middle" fill="#1e5e9f" font-weight="bold">q_evt (16)</text>
+<polyline points="635,570 635,448" fill="none" stroke="#1e5e9f" stroke-width="2.2"/>
+<polygon points="635,448 641.5,461.0 628.5,461.0" fill="#1e5e9f"/>
+<polyline points="650,420 650,302" fill="none" stroke="#1e5e9f" stroke-width="2.2"/>
+<polygon points="650,302 656.5,315.0 643.5,315.0" fill="#1e5e9f"/>
+<polyline points="1145,570 1145,520 700,520 700,448" fill="none" stroke="#1e5e9f" stroke-width="2.2" stroke-dasharray="7,5"/>
+<polygon points="700,448 706.5,461.0 693.5,461.0" fill="#1e5e9f"/>
+<text x="930" y="513" font-size="14" text-anchor="middle" fill="#1e5e9f" font-weight="normal">comandos remotos</text>
+<rect x="850" y="250" width="40" height="30" fill="#fff2cc" stroke="#b07a00" stroke-width="2"/>
+<text x="870" y="243" font-size="14" text-anchor="middle" fill="#7a5200" font-weight="bold">mbx</text>
+<polyline points="820,265 848,265" fill="none" stroke="#b07a00" stroke-width="2.2"/>
+<polygon points="848,265 835.0,271.5 835.0,258.5" fill="#b07a00"/>
+<polyline points="880,280 805,568" fill="none" stroke="#b07a00" stroke-width="2.2" stroke-dasharray="7,5"/>
+<polygon points="805,568 802.0,553.8 814.6,557.1" fill="#b07a00"/>
+<polyline points="890,272 1145,568" fill="none" stroke="#b07a00" stroke-width="2.2" stroke-dasharray="7,5"/>
+<polygon points="1145,568 1131.6,562.4 1141.4,553.9" fill="#b07a00"/>
+<rect x="930" y="400" width="16" height="26" fill="#e8f0fb" stroke="#2e7d32" stroke-width="1.8"/>
+<rect x="946" y="400" width="16" height="26" fill="#e8f0fb" stroke="#2e7d32" stroke-width="1.8"/>
+<rect x="962" y="400" width="16" height="26" fill="#e8f0fb" stroke="#2e7d32" stroke-width="1.8"/>
+<text x="954.0" y="393" font-size="14" text-anchor="middle" fill="#2e7d32" font-weight="bold">q_stor</text>
+<polyline points="820,290 935,398" fill="none" stroke="#2e7d32" stroke-width="2.2"/>
+<polygon points="935,398 921.1,393.8 930.0,384.4" fill="#2e7d32"/>
+<polyline points="975,426 975,568" fill="none" stroke="#2e7d32" stroke-width="2.2"/>
+<polygon points="975,568 968.5,555.0 981.5,555.0" fill="#2e7d32"/>
+<polyline points="635,790 635,682" fill="none" stroke="#666" stroke-width="2.2"/>
+<polygon points="635,682 641.5,695.0 628.5,695.0" fill="#666"/>
+<polyline points="805,790 805,682" fill="none" stroke="#666" stroke-width="2.2"/>
+<polygon points="805,682 811.5,695.0 798.5,695.0" fill="#666"/>
+<polyline points="975,790 975,682" fill="none" stroke="#666" stroke-width="2.2"/>
+<polygon points="975,682 981.5,695.0 968.5,695.0" fill="#666"/>
+<polyline points="1145,790 1145,682" fill="none" stroke="#666" stroke-width="2.2"/>
+<polygon points="1145,682 1151.5,695.0 1138.5,695.0" fill="#666"/>
+<polyline points="1300,790 1300,682" fill="none" stroke="#666" stroke-width="2.2"/>
+<polygon points="1300,682 1306.5,695.0 1293.5,695.0" fill="#666"/>
+<text x="40" y="900" font-size="15" text-anchor="start" fill="#333" font-weight="normal">Colas FreeRTOS: mensajes por valor, sin punteros compartidos. mbx = buzón de longitud 1 (xQueueOverwrite) con la última instantánea; T_UI y T_NET reciben una notificación de tarea.</text>
+<text x="40" y="925" font-size="15" text-anchor="start" fill="#333" font-weight="normal">Ningún recurso tiene dos dueños: la microSD es solo de T_STOR, el estado solo de T_APP y las muestras solo de T_DSP; por eso no se necesitan mutex en el camino de tiempo real.</text>
+</svg>

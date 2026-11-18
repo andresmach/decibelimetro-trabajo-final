@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="820" viewBox="0 0 1400 820" font-family="Arial, Helvetica, sans-serif">
+<rect width="1400" height="820" fill="#fff"/>
+<text x="700" y="36" font-size="23" text-anchor="middle" fill="#222" font-weight="bold">Diagrama de hardware por bloques: buses, tensiones y conectores</text>
+<rect x="520" y="250" width="360" height="250" rx="8" fill="#dceaf7" stroke="#1e5e9f" stroke-width="3"/>
+<text x="700.0" y="339.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">ESP32-S3-WROOM-1 N16R8</text>
+<text x="700.0" y="360.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">240 MHz · 2 núcleos · Wi-Fi</text>
+<text x="700.0" y="381.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">16 MB flash · 8 MB PSRAM</text>
+<text x="700.0" y="402.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">USB-Serial/JTAG nativo</text>
+<text x="700.0" y="423.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">antena en el borde de la placa</text>
+<rect x="60" y="90" width="300" height="110" rx="8" fill="#dceaf7" stroke="#1e5e9f" stroke-width="2"/>
+<text x="210.0" y="130.0" font-size="16" text-anchor="middle" fill="#111" font-weight="bold">Placa satélite (J2)</text>
+<text x="210.0" y="151.0" font-size="13" text-anchor="middle" fill="#444" font-weight="normal">ICS-43434 · 3V3_MIC</text>
+<text x="210.0" y="172.0" font-size="13" text-anchor="middle" fill="#444" font-weight="normal">pull-down 100 kΩ en SD; filtros RF</text>
+<polyline points="360,140 450,140 450,300 518,300" fill="none" stroke="#1e5e9f" stroke-width="2.4"/>
+<polygon points="518,300 505.0,306.5 505.0,293.5" fill="#1e5e9f"/>
+<text x="300" y="232" font-size="14" text-anchor="middle" fill="#1e5e9f" font-weight="bold">I2S: BCLK, WS, SD (33 Ω serie)</text>
+<text x="300" y="252" font-size="13" text-anchor="middle" fill="#1e5e9f" font-weight="normal">cable apantallado 5 cond. + malla, ≈ 15 cm</text>
+<rect x="1040" y="90" width="300" height="90" rx="8" fill="#f2f2f2" stroke="#666" stroke-width="2"/>
+<text x="1190.0" y="130.5" font-size="16" text-anchor="middle" fill="#111" font-weight="bold">Pantalla TFT de 2,8 in</text>
+<text x="1190.0" y="151.5" font-size="13" text-anchor="middle" fill="#444" font-weight="normal">controlador ILI9341 (o similar)</text>
+<polyline points="880,300 950,300 950,135 1038,135" fill="none" stroke="#555" stroke-width="2.4"/>
+<polygon points="1038,135 1025.0,141.5 1025.0,128.5" fill="#555"/>
+<text x="1000" y="220" font-size="14" text-anchor="middle" fill="#555" font-weight="bold">SPI2: CS, MOSI, SCLK, DC, RST, PWM</text>
+<rect x="1040" y="330" width="300" height="90" rx="8" fill="#f2f2f2" stroke="#666" stroke-width="2"/>
+<text x="1190.0" y="370.5" font-size="16" text-anchor="middle" fill="#111" font-weight="bold">Zócalo microSD</text>
+<text x="1190.0" y="391.5" font-size="13" text-anchor="middle" fill="#444" font-weight="normal">detección de tarjeta</text>
+<polyline points="880,375 1038,375" fill="none" stroke="#555" stroke-width="2.4"/>
+<polygon points="1038,375 1025.0,381.5 1025.0,368.5" fill="#555"/>
+<text x="960" y="365" font-size="14" text-anchor="middle" fill="#555" font-weight="bold">SDMMC 1 bit</text>
+<rect x="1040" y="470" width="300" height="90" rx="8" fill="#f2f2f2" stroke="#666" stroke-width="2"/>
+<text x="1190.0" y="510.5" font-size="16" text-anchor="middle" fill="#111" font-weight="bold">Pulsadores (3) · LED bicolor</text>
+<text x="1190.0" y="531.5" font-size="13" text-anchor="middle" fill="#444" font-weight="normal">TVS en las entradas</text>
+<polyline points="880,460 960,460 960,515 1038,515" fill="none" stroke="#555" stroke-width="2.4"/>
+<polygon points="1038,515 1025.0,521.5 1025.0,508.5" fill="#555"/>
+<text x="990" y="450" font-size="14" text-anchor="middle" fill="#555" font-weight="bold">GPIO</text>
+<rect x="60" y="350" width="300" height="120" rx="8" fill="#f2f2f2" stroke="#666" stroke-width="2"/>
+<text x="210.0" y="395.0" font-size="16" text-anchor="middle" fill="#111" font-weight="bold">USB-C (J1)</text>
+<text x="210.0" y="416.0" font-size="13" text-anchor="middle" fill="#444" font-weight="normal">D+/D− → USB nativo</text>
+<text x="210.0" y="437.0" font-size="13" text-anchor="middle" fill="#444" font-weight="normal">VBUS, CC → cargador y comparador</text>
+<polyline points="360,400 518,400" fill="none" stroke="#555" stroke-width="2.4"/>
+<polygon points="518,400 505.0,406.5 505.0,393.5" fill="#555"/>
+<text x="440" y="390" font-size="14" text-anchor="middle" fill="#555" font-weight="bold">USB 2.0 FS (D+/D−)</text>
+<rect x="60" y="560" width="300" height="130" rx="8" fill="#f3e8f7" stroke="#6a1b9a" stroke-width="2"/>
+<text x="210.0" y="610.0" font-size="16" text-anchor="middle" fill="#111" font-weight="bold">Alimentación (Fig. 5.2)</text>
+<text x="210.0" y="631.0" font-size="13" text-anchor="middle" fill="#444" font-weight="normal">BQ24074 · 18650 · conmutador</text>
+<text x="210.0" y="652.0" font-size="13" text-anchor="middle" fill="#444" font-weight="normal">LDO 3,3 V · LP5907 3,3 V</text>
+<polyline points="360,600 700,600 700,502" fill="none" stroke="#6a1b9a" stroke-width="2.4"/>
+<polygon points="700,502 706.5,515.0 693.5,515.0" fill="#6a1b9a"/>
+<text x="560" y="590" font-size="14" text-anchor="middle" fill="#6a1b9a" font-weight="bold">3V3_D</text>
+<polyline points="60,625 35,625 35,145 58,145" fill="none" stroke="#2e7d32" stroke-width="2.4"/>
+<polygon points="58,145 45.0,151.5 45.0,138.5" fill="#2e7d32"/>
+<text x="80" y="530" font-size="14" text-anchor="middle" fill="#2e7d32" font-weight="bold">3V3_MIC</text>
+<polyline points="360,650 780,650 780,502" fill="none" stroke="#555" stroke-width="2.4" stroke-dasharray="7,5"/>
+<polygon points="780,502 786.5,515.0 773.5,515.0" fill="#555"/>
+<text x="560" y="640" font-size="14" text-anchor="middle" fill="#555" font-weight="bold">VBAT, /CHG, /PGOOD, fuente ≥ 1,5 A, POWER_HOLD</text>
+<rect x="1040" y="610" width="300" height="90" rx="8" fill="#fff" stroke="#888" stroke-width="2"/>
+<text x="1190.0" y="650.5" font-size="15" text-anchor="middle" fill="#111" font-weight="bold">Puntos de prueba</text>
+<text x="1190.0" y="671.5" font-size="12" text-anchor="middle" fill="#444" font-weight="normal">VSYS, 3V3_D, 3V3_MIC, I2S, UART0</text>
+<text x="700" y="780" font-size="15" text-anchor="middle" fill="#333" font-weight="normal">Conectores: J1 USB-C · J2 vástago del micrófono (6 contactos) · J3 portapila. Pines en la Tabla 5.7.</text>
+</svg>

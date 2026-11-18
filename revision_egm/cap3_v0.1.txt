@@ -1,0 +1,449 @@
+                           Universidad Nacional de Entre Ríos
+                                  Facultad de Ingeniería
+                         Especialización en Sistemas Embebidos
+
+
+
+                                     Capítulo 3
+                Procesamiento Digital de Señales
+ Diseño y verificación del banco de filtros de octava y del cálculo
+                             de niveles
+
+Analizador autónomo de ruido ambiente por bandas de octava para la verificación
+                 de cabinas audiométricas según ISO 8253-1
+
+
+
+
+Autor: Andrés Machtey
+Director propuesto: Esp. Víctor Valotto (FIUNER)
+Versión: 0.1 (borrador para revisión) · Noviembre de 2026
+Material reproducible: dsp/octave/diseno_banco.m, dsp/octave/graficos.gp, dsp/resultados/
+3.1 Enfoque del capítulo
+Este capítulo analiza el proyecto desde la materia Procesamiento Digital de Señales. Su
+objeto es la cadena que transforma las muestras del micrófono en siete niveles de presión
+sonora por banda de octava: el diseño de los filtros, la arquitectura multitasa, la
+verificación numérica contra la norma IEC 61260-1, el cálculo del nivel equivalente y el
+límite que impone el ruido propio del micrófono. Parte del análisis crítico del prototipo
+construido en el curso de DSP y termina con decisiones de diseño justificadas y con los
+coeficientes listos para el firmware.
+Todo el diseño es reproducible: el script de Octave diseno_banco.m calcula los filtros,
+simula la cadena completa, mide los márgenes contra la máscara y genera el archivo
+octave_coeffs.h que compila el firmware. Las cifras de este capítulo salen de su salida
+(resultados/resumen.txt).
+
+Requisitos que condicionan el procesamiento
+ Requisito            Enunciado (anteproyecto)                          Consecuencia para el DSP
+             Leq simultáneo en 7 bandas de octava, 125      Siete filtros en paralelo sobre el mismo flujo;
+RD-01
+             Hz a 8 kHz                                     frecuencias medias normalizadas
+             Filtros dentro de las máscaras de IEC          Orden y tipo de filtro; se diseña con objetivo
+RD-02
+             61260-1 clase 2                                clase 1 para tener margen
+             Ruido propio por banda ≥ 5 dB bajo el límite   Elección del micrófono; estimación del piso por
+RD-03
+             ISO                                            banda (sección 3.8)
+             Hasta ≥ 100 dB SPL sin saturar; linealidad     Escala del ADC digital del micrófono; aritmética
+RD-04
+             ±1 dB                                          de punto flotante
+                                                            Ganancia de la banda de 1 kHz exactamente 0
+RD-05        Exactitud ±0,5 dB a 1 kHz tras calibración
+                                                            dB en f_m; constante de calibración
+                                                            Integración lineal por bloques; acumuladores sin
+RD-06        Integración 10 a 120 s; refresco ≤ 250 ms
+                                                            pérdida de precisión
+             Tiempo real sin pérdidas; CPU del núcleo       Costo computacional acotado; multitasa;
+RD-07
+             DSP ≤ 70 %                                     biblioteca ESP-DSP
+
+
+
+3.2 Análisis crítico del prototipo previo
+El prototipo del curso usaba un único biquad pasabanda por banda a f_s = 51 200 Hz, con
+coeficientes precalculados (biquad_filters.c). La Figura 3.1 muestra su respuesta real,
+calculada a partir de esos coeficientes: salvo la banda de 125 Hz, ningún filtro es
+pasabanda; todos se comportan como pasabajos con la frecuencia de corte cerca de la
+frecuencia central.
+       Figura 3.1. Respuesta de los biquads del prototipo previo (coeficientes de biquad_filters.c).
+
+                                                                                              Borde −3 dB
+   Banda              Polos             Ganancia en f_c      Borde −3 dB inferior
+                                                                                               superior
+   125 Hz        0,9911 / 0,9911            −0,26 dB                 87,5 Hz                    230 Hz
+   250 Hz        0,9969 / 0,9682            −2,03 dB                 21,9 Hz                    309 Hz
+   500 Hz        0,9985 / 0,9334            −2,35 dB                 11,8 Hz                    584 Hz
+    1 kHz        1,0000 / 0,8710            −2,54 dB                 < 10 Hz                    1117 Hz
+    2 kHz        1,0000 / 0,7693            −2,77 dB                 < 10 Hz                    2103 Hz
+    4 kHz        1,0000 / 0,6254            −3,39 dB                 < 10 Hz                    3682 Hz
+    8 kHz        1,0000 / 0,4514            −4,77 dB                 < 10 Hz                    5867 Hz
+
+
+                 Tabla 3.1. Polos (reales) y bordes de la respuesta de los filtros previos.
+
+Causa raíz. El comentario del código describe la fórmula clásica del pasabanda de 2.º
+orden (b₀ = α, b₂ = −α, a₁ = −2cos ω₀, a₂ = 1 − α, normalizados por 1 + α), pero los
+coeficientes cargados no la respetan: en las bandas de 1 a 8 kHz cumplen exactamente 1
++ a₁ + a₂ = 0 (por ejemplo, 1 − 1,8710 + 0,8710 = 0), lo que ubica un polo en z = 1. Ese
+polo se cancela con el cero en z = 1 del pasabanda y queda un sistema de primer orden
+con un polo real y un cero en z = −1: un pasabajos. Además, la cancelación es frágil: un
+polo sobre el círculo unitario es marginalmente estable y cualquier redondeo puede
+volverlo inestable.
+Limitaciones de fondo, aun con los coeficientes correctos:
+ • Un pasabanda de 2.º orden con Q = √2 cae 6 dB por octava fuera de banda. A una
+   octava de f_m atenúa unos 7 dB, cuando la norma exige del orden de 16 a 18 dB. No
+   puede cumplir IEC 61260-1 en ninguna clase.
+ • A 51,2 kHz la banda de 125 Hz tiene f_m / f_s ≈ 0,0025: los polos quedan a menos de
+   0,01 del círculo unitario y la respuesta es muy sensible a la cuantización de
+   coeficientes en float32.
+ • La norma citada en el prototipo para los filtros era IEC 61672 (sonómetros); la norma
+   específica de filtros de octava es IEC 61260-1.
+Estas observaciones se resumen como lecciones aprendidas: (1) los coeficientes deben
+generarse con una herramienta y no transcribirse a mano; (2) la respuesta de cada filtro
+debe verificarse automáticamente contra la máscara normativa; (3) el diseño debe evitar
+polos cercanos a z = 1.
+
+3.3 Marco normativo de los filtros
+Frecuencias medias y bordes de banda
+IEC 61260-1:2014 define las bandas con razón de octava en base diez, G = 10^(3/10) ≈
+1,99526. Las frecuencias medias exactas son f_m = 1000 · G^k Hz y los bordes de banda
+f₁ = f_m · G^(−1/2) y f₂ = f_m · G^(1/2). Los valores nominales (125, 250 … 8000 Hz)
+sirven solo como rótulos: el diseño usa siempre los exactos.
+    k       Nominal      f_m exacta [Hz]           f₁ [Hz]            f₂ [Hz]         Ancho [Hz]
+    −3        125            125,89                 89,13             177,83             88,7
+    −2        250            251,19               177,83              354,81             177,0
+    −1        500            501,19               354,81              707,95             353,1
+    0        1000           1000,00               707,95             1412,54             704,6
+    1        2000           1995,26               1412,54            2818,38            1405,8
+    2        4000           3981,07               2818,38            5623,41            2805,0
+    3        8000           7943,28               5623,41            11220,18           5596,8
+
+
+                        Tabla 3.2. Bandas de octava en base diez (IEC 61260-1).
+
+Máscara de atenuación relativa
+La norma especifica, para frecuencias normalizadas Ω = f / f_m, límites mínimos y
+máximos de la atenuación relativa (atenuación a la frecuencia f menos la atenuación en
+f_m) para las clases 1 y 2. En la banda de paso el límite máximo acota la ondulación;
+fuera de banda el límite mínimo exige rechazo. También fija la desviación admisible del
+ancho de banda efectivo, que es lo que determina el error de nivel con ruido de banda
+ancha.
+                                                Clase 1 máx.                          Clase 2 máx.
+   Ω (potencia de G)      Clase 1 mín. [dB]                       Clase 2 mín. [dB]
+                                                    [dB]                                  [dB]
+          G^0                   −0,4                +0,4                −0,6              +0,6
+        G^(±1/8)                −0,4                +0,6                −0,6              +0,8
+        G^(±1/4)                −0,4                +0,8                −0,6              +1,1
+        G^(±3/8)                −0,4                +1,4                −0,6              +1,9
+    G^(±1/2) (bordes)           +1,2                +5,3                +0,4              +5,8
+         G^(±1)                 +17,5                +∞                 +16,5              +∞
+         G^(±2)                 +42,5                +∞                 +41,5              +∞
+         G^(±3)                 +62,0                +∞                 +55,0              +∞
+                                                 Clase 1 máx.                            Clase 2 máx.
+   Ω (potencia de G)       Clase 1 mín. [dB]                       Clase 2 mín. [dB]
+                                                     [dB]                                    [dB]
+           G^(±4)                +75,0                +∞                 +60,0                +∞
+
+
+   Tabla 3.3. Máscara de trabajo usada en la verificación. ATENCIÓN: valores de trabajo, pendientes de
+                             contrastar con la Tabla 1 de IEC 61260-1:2014.
+
+Advertencia metodológica. El texto completo de IEC 61260-1:2014 es de acceso pago y
+no se pudo consultar durante esta revisión. Los límites de la Tabla 3.3 se tomaron como
+valores de trabajo. Por eso la verificación está automatizada: la máscara es un archivo
+(resultados/mascara.csv) y, al reemplazarla por los valores oficiales, el script recalcula
+todos los márgenes. Conseguir la norma (biblioteca de la FIUNER o IRAM) es una tarea
+del entregable E2.
+
+3.4 Diseño del filtro de banda
+Tipo de aproximación
+Se eligió la aproximación Butterworth por tres razones: (1) su banda de paso es
+máximamente plana, lo que facilita cumplir el límite de ±0,4 dB alrededor de f_m sin
+ondulación; (2) su respuesta en los bordes es de −3,01 dB, centrada en el intervalo
+admitido; (3) es la solución habitual en los analizadores de octava y tiene un retardo de
+grupo más suave que Chebyshev o elíptico, lo que acorta los transitorios. Chebyshev o
+elíptico darían más rechazo con el mismo orden, pero con ondulación en la banda de
+paso, que consume el margen más estrecho de la máscara.
+
+Del prototipo analógico al filtro digital
+Cada banda se diseña como pasabanda digital con la función butter de Octave, que aplica
+la transformación pasabajos → pasabanda y la transformación bilineal con
+predistorsión de los bordes f₁ y f₂. Un prototipo de orden N produce un pasabanda de
+orden 2N, que se implementa como N secciones de segundo orden (SOS) en cascada
+(zp2sos), en forma directa II transpuesta. La realización en cascada evita la sensibilidad
+de la forma directa de alto orden.
+
+Elección del orden
+Se compararon los prototipos N = 3 (pasabanda de orden 6) y N = 4 (orden 8). La Tabla
+3.4 muestra la atenuación en los puntos críticos del lado inferior de la banda de 1 kHz,
+que es el más exigente porque la transformación bilineal agrega atenuación del lado
+superior.
+              Punto                Límite clase 1    Límite clase 2         N=3               N=4
+f_m / G                                 17,5              16,5              18,2              24,2
+f_m / G²                                42,5              41,5             41,2 ✗             55,0
+f_m / G³                                62,0              55,0            60,3 ✗ c1           80,5
+f_m / G⁴                                75,0              60,0              78,6              104,8
+Margen mínimo clase 1                                                     −1,66 dB          +0,40 dB
+Margen mínimo clase 2                                                     −0,27 dB          +0,60 dB
+             Punto                  Límite clase 1    Límite clase 2          N=3                  N=4
+SOS por banda / total                                                         3 / 39               4 / 46
+Multiplicaciones por segundo                                                 ≈ 4,3 M           ≈ 4,7 M
+
+
+Tabla 3.4. Atenuación relativa [dB] de la banda de 1 kHz y márgenes contra la máscara de trabajo (respuesta
+                             analítica de la banda de 1 kHz a su tasa de 6 kHz).
+
+Decisión D3.1: prototipo Butterworth de orden N = 4 (pasabanda de orden 8, 4 SOS
+por banda). Con N = 3 el banco no cumple la máscara de trabajo ni siquiera en clase 2 (le
+faltan 0,27 dB en f_m / G²). Con N = 4 cumple clase 1 con un margen de 0,40 dB en la
+banda de paso y de al menos 6,7 dB fuera de banda, a cambio de un 11 % más de
+cálculo, que es irrelevante para el ESP32-S3 (sección 3.9). Si los valores oficiales de la
+norma resultaran más laxos, N = 3 podría reconsiderarse; la decisión queda trazada al
+resultado del script.
+
+
+
+
+            Figura 3.2. Banda de 1 kHz con N = 3 y N = 4 frente a la máscara de trabajo clase 1.
+        Figura 3.3. Detalle de la banda de paso: ambos órdenes respetan los límites cerca de f_m.
+
+
+3.5 Arquitectura multitasa
+Diseñar las siete bandas a 48 kHz obligaría a ubicar los polos de la banda de 125 Hz muy
+cerca de z = 1 (f_m / f_s ≈ 0,0026), el mismo problema de condicionamiento del prototipo.
+La solución clásica es la descomposición por octavas: la banda más alta se filtra a 48
+kHz y, para cada octava inferior, la señal se filtra con un pasabajos antialias y se diezma
+por 2. Así todas las bandas trabajan con la misma relación f_m / f_s ≈ 1/6 y el radio
+máximo de los polos queda en 0,90.
+    Figura 3.4. Arquitectura multitasa: un filtro de banda por tasa y una etapa antialias + ↓2 entre tasas.
+
+         Banda           8 kHz       4 kHz       2 kHz         1 kHz        500 Hz       250 Hz       125 Hz
+f_s de la banda          48 kHz      24 kHz      12 kHz        6 kHz         3 kHz       1,5 kHz      750 Hz
+f₂ / (f_s/2)              0,468       0,469       0,470        0,471         0,472        0,473        0,474
+|p| máximo                0,899       0,899       0,898        0,898         0,898        0,898        0,897
+
+
+                  Tabla 3.5. Tasa de procesamiento y condicionamiento de cada banda (N = 4).
+
+Filtro antialias
+Antes de cada diezmado se usa un pasabajos elíptico de orden 6 (3 SOS), igual en
+todas las etapas porque está normalizado a la tasa de entrada. Su banda de paso llega
+hasta 0,118 · f_entrada, que cubre el borde superior de todas las bandas inferiores, con
+una ondulación de 0,01 dB. Su banda de rechazo empieza en 0,382 · f_entrada con 80 dB
+de atenuación: es la región que, al diezmar, se plegaría sobre la banda de paso de la
+octava siguiente. La primera versión, con 0,05 dB de ondulación, acumulaba hasta 0,16
+dB de error en la banda de 125 Hz tras seis etapas; por eso se ajustó a 0,01 dB.
+Los filtros IIR no permiten calcular solo las muestras que sobreviven al diezmado, así que
+cada etapa antialias corre a la tasa de entrada. Aun así, el costo total es de unas 4,7
+millones de multiplicaciones por segundo, porque las tasas se reducen geométricamente.
+Una implementación polifásica con filtros pasatodo (medio banda) es una optimización
+posible que no hace falta.
+3.6 Verificación numérica
+La verificación tiene dos niveles. El analítico evalúa la respuesta en frecuencia de cada
+banda a su propia tasa. El extremo a extremo inyecta tonos de 2 s a 48 kHz, los hace
+pasar por toda la cadena (antialias, diezmados y filtro de banda) y mide la potencia de
+salida descartando el transitorio. El segundo nivel incluye los efectos que el análisis por
+bandas no ve: la ondulación acumulada de los antialias y el plegado espectral.
+
+
+
+
+                      Figura 3.5. Respuesta analítica del banco propuesto (N = 4).
+
+
+
+
+    Figura 3.6. Respuesta extremo a extremo obtenida con 260 tonos simulados entre 20 Hz y 23 kHz.
+         Banda                 125       250        500         1k          2k         4k         8k
+Margen clase 1 [dB]            0,37      0,38       0,39       0,39        0,40       0,40       0,40
+Margen clase 2 [dB]            0,57      0,58       0,59       0,59        0,60       0,60       0,60
+
+
+  Tabla 3.6. Margen mínimo extremo a extremo contra la máscara de trabajo. En todos los casos el punto
+           limitante es f_m (límite de ±0,4 dB); fuera de banda el margen es de al menos 6,7 dB.
+
+Otros indicadores
+ • Ancho de banda efectivo: desviación de +0,078 dB respecto del ancho nominal en
+   escala logarítmica (N = 3: +0,135 dB). Con ruido rosa, el error de nivel por la forma
+   del filtro es menor que una décima de decibel.
+ • Plegado espectral: ningún tono fuera de G^(±4,2) produce una salida mayor que −80
+   dB en ninguna banda.
+ • Cuantización de coeficientes: al pasar los coeficientes a float32, la respuesta
+   cambia como máximo 2·10⁻⁶ dB en la zona útil (> −40 dB). La multitasa elimina el
+   problema de sensibilidad del prototipo.
+ • Ganancia en f_m: 0,000 dB en todas las bandas y −3,01 dB en los bordes, como
+   corresponde a un Butterworth con bordes predistorsionados.
+Limitación de la verificación: la simulación usa aritmética de doble precisión. El ruido de
+redondeo de la aritmética en float32 del ESP32-S3 se verificará con vectores de prueba
+en el propio microcontrolador (sección 3.10).
+
+3.7 Del filtro al nivel de presión sonora
+Nivel equivalente por banda
+Para cada banda b, la salida del filtro y_b[n] (en unidades de fondo de escala) se eleva al
+cuadrado y se acumula durante el tiempo de integración T, que contiene N_b = T · f_s,b
+muestras. El nivel equivalente es:
+                      L_eq,b = 10 · log₁₀( (1 / N_b) · Σ y_b²[n] ) + K [dB SPL]
+donde K es la constante de calibración. La integración es lineal (promedio energético
+simple), como corresponde al L_eq; no se usan las ponderaciones temporales
+exponenciales (F/S) de los sonómetros, que no aplican a la verificación según ISO 8253-
+1.
+
+Calibración
+Con el calibrador acústico de 94 dB SPL a 1 kHz acoplado, se mide el cuadrado medio de
+la banda de 1 kHz durante 10 s y se obtiene K = 94 − 10 · log₁₀(media de y²). Se usa la
+salida de la banda y no la señal de banda ancha para que el ruido ambiente fuera de la
+banda no sesgue la calibración. Como la ganancia en f_m es exactamente 0 dB en todas
+las bandas, la misma constante vale para las siete. La respuesta en frecuencia del
+micrófono se trata como plana. Si la hoja de datos o el ensayo EN-05 muestran desvíos
+mayores que 0,5 dB, se agregará una tabla de corrección por banda.
+Integración por bloques y precisión
+El firmware procesa bloques de 1024 muestras de entrada (21,3 ms). Cada banda
+acumula su suma de cuadrados del bloque en float32 y la suma en un acumulador de
+doble precisión por sesión. En 120 s se suman 5,8 millones de muestras en la banda de
+8 kHz; en float32 los incrementos se perderían frente al acumulado. La indicación en
+pantalla se refresca cada 12 bloques (≈ 256 ms; RD-06 pide ≤ 250 ms, así que se usarán
+11 bloques ≈ 235 ms). Al iniciar una medición se descartan los primeros 0,5 s para que se
+extinga el transitorio de los filtros, que es más largo en la banda de 125 Hz.
+
+3.8 Ruido propio del micrófono y límite de detección
+Los límites de ruido ambiente de ISO 8253-1 son muy bajos (del orden de 20 a 40 dB SPL
+por banda), así que el ruido propio del micrófono es la limitación física principal del
+instrumento. El ruido equivalente de entrada (EIN) se calcula a partir de la hoja de datos:
+94 dB SPL menos la relación señal/ruido ponderada A. Para el INMP441 es de 33 dBA
+(SNR 61 dBA) y para el ICS-43434, de 29 dBA (SNR 65 dBA).
+Suponiendo un ruido de espectro blanco, el nivel por banda se estima repartiendo el EIN
+según el ancho equivalente de la ponderación A (≈ 12 470 Hz) y el ancho de cada banda:
+L_ruido,b = EIN + 10 · log₁₀(B_b / 12 470).
+
+
+
+
+           Figura 3.7. Piso de ruido estimado por banda frente a los límites de la tabla del prototipo.
+
+                                                                 ICS-43434: piso /         Sesgo si L = límite
+   Banda         Límite ISO*     INMP441: piso / margen
+                                                                      margen                     (ICS)
+   125 Hz             35                11,5 / 23,5                  7,5 / 27,5                0,01 dB
+   250 Hz             25                14,5 / 10,5                 10,5 / 14,5                0,15 dB
+   500 Hz             21                17,5 / 3,5 ✗                 13,5 / 7,5                0,71 dB
+    1 kHz             26                 20,5 / 5,5                  16,5 / 9,5                0,46 dB
+    2 kHz             34                23,5 / 10,5                 19,5 / 14,5                0,15 dB
+    4 kHz             37                26,5 / 10,5                 22,5 / 14,5                0,15 dB
+                                                              ICS-43434: piso /        Sesgo si L = límite
+   Banda        Límite ISO*    INMP441: piso / margen
+                                                                  margen                     (ICS)
+   8 kHz             43               29,5 / 13,5                25,5 / 17,5               0,08 dB
+
+
+ Tabla 3.7. Estimación del piso de ruido [dB SPL] y margen frente a RD-03 (≥ 5 dB). *Valores de la tabla del
+                            prototipo, pendientes de verificar contra ISO 8253-1.
+
+Decisión D3.2: micrófono ICS-43434. Con el INMP441 el margen en 500 Hz es de 3,5
+dB y no cumple RD-03. Una medición justo en el límite tendría un sesgo de +1,6 dB y una
+cabina en el límite podría declararse NO APTA. Con el ICS-43434 el margen mínimo es
+de 7,5 dB y el sesgo en el límite queda por debajo de 0,8 dB. El cambio de micrófono no
+altera la interfaz I2S ni el firmware.
+Supuestos y riesgos. El ruido de los MEMS no es blanco: crece a bajas frecuencias por
+el componente 1/f, así que el piso real en 125 y 250 Hz será mayor que el estimado. El
+margen en esas bandas es amplio, pero la estimación debe confirmarse con el ensayo
+EN-02, con el micrófono en un recinto aislado. Para mitigar el riesgo, el firmware guardará
+el piso medido de cada banda, restará la energía del ruido propio cuando el nivel medido
+lo supere en 3 a 10 dB, e informará "por debajo del límite de detección" cuando la
+diferencia sea menor que 3 dB.
+
+3.9 Implementación en el ESP32-S3
+ • Biblioteca: ESP-DSP (Espressif) ofrece dsps_biquad_f32, con una variante
+   optimizada para las instrucciones vectoriales del ESP32-S3. Usa el formato {b₀, b₁,
+   b₂, a₁, a₂} con a₀ = 1 y dos variables de estado por sección, el mismo formato que
+   genera octave_coeffs.h.
+ • Memoria: 46 SOS × (5 coeficientes + 2 estados) × 4 bytes ≈ 1,3 kB, más los búferes
+   intermedios de cada tasa (como máximo 1024 muestras float32 = 4 kB). Entra con
+   holgura en la SRAM interna.
+ • Cómputo: unas 4,7 millones de multiplicaciones por segundo. Aun suponiendo 10
+   ciclos por multiplicación-acumulación, con lazos, cargas y la conversión de 24 bits a
+   float, son ≈ 50 millones de ciclos por segundo: alrededor del 20 % de un núcleo a 240
+   MHz. Es una cota conservadora frente al 70 % de RD-07 y se medirá en el ensayo
+   EN-06.
+ • Generación automática: el firmware no contiene coeficientes escritos a mano;
+   incluye octave_coeffs.h, generado por diseno_banco.m. Así se elimina la causa raíz
+   del error del prototipo.
+ • Modo de prueba: un comando de servicio reemplaza las muestras del I2S por un
+   barrido senoidal generado internamente, lo que permite ejecutar EN-01 en el equipo
+   real.
+3.10 Plan de verificación del procesamiento
+       ID              Tipo                      Procedimiento                         Criterio de aceptación
+                                                                                  Margen ≥ 0 dB en todas las
+                                  diseno_banco.m con la máscara oficial de
+PU-DSP-01        Unitaria (PC)                                                    bandas (clase 2 obligatoria;
+                                  IEC 61260-1
+                                                                                  objetivo clase 1)
+                                  Vectores dorados: la salida del firmware para
+                                                                                  Error de nivel ≤ 0,01 dB por
+PU-DSP-02        Unitaria (MCU)   10 señales de prueba se compara con la de
+                                                                                  banda
+                                  Octave
+                                  Tono de amplitud conocida en f_m de cada
+PU-DSP-03        Unitaria (MCU)                                                   Leq teórico ± 0,05 dB
+                                  banda; Leq de 10 s
+                                                                                  Sin desbordes ni NaN; nivel
+PU-DSP-04        Unitaria (MCU)   Señal de fondo de escala y silencio digital     mínimo representable < 0 dB
+                                                                                  SPL
+                                  Barrido senoidal en modo de prueba y, luego,
+EN-01            Integración                                                      Dentro de la máscara (RD-02)
+                                  barrido eléctrico
+                                  Micrófono en recinto aislado; Leq de 60 s por   Piso ≥ 5 dB bajo el límite ISO
+EN-02            Sistema
+                                  banda                                           (RD-03)
+                                  Calibración con 94 dB / 1 kHz, 10
+EN-03            Sistema                                                          94,0 ± 0,5 dB (RD-05)
+                                  repeticiones
+                                  Funcionamiento de 8 h con medición del uso      CPU ≤ 70 %; 0 desbordes (RD-
+EN-06            Sistema
+                                  de CPU                                          07)
+
+
+  Tabla 3.8. Pruebas unitarias nuevas (PU-DSP) y ensayos del anteproyecto que verifican este capítulo.
+
+
+3.11 Conclusiones y decisiones
+  ID                           Decisión                                           Justificación
+            Butterworth, prototipo N = 4 (orden 8, 4 SOS      Cumple la máscara de trabajo clase 1 extremo a
+D3.1
+            por banda)                                        extremo; N = 3 no cumple ni clase 2
+                                                              Margen de ruido ≥ 7,5 dB en todas las bandas
+D3.2        Micrófono ICS-43434 en lugar de INMP441
+                                                              (RD-03)
+            f_s = 48 kHz y arquitectura multitasa con         Mismo condicionamiento en todas las bandas;
+D3.3
+            diezmado por 2                                    float32 suficiente; costo bajo
+            Antialias elíptico de orden 6, ondulación 0,01    Error acumulado despreciable tras 6 etapas;
+D3.4
+            dB, rechazo de 80 dB                              plegado < −80 dB
+            Leq lineal; calibración en la banda de 1 kHz;     Coherente con ISO 8253-1; inmune al ruido fuera
+D3.5
+            acumulador en doble precisión                     de banda; sin pérdida numérica
+            Coeficientes generados por script y verificados
+D3.6                                                        Elimina la causa raíz del error del prototipo
+            automáticamente
+
+
+
+Pendientes
+ • Obtener IEC 61260-1:2014 y reemplazar la máscara de trabajo por la oficial (Tabla 1).
+ • Verificar los límites de ruido ambiente de ISO 8253-1:2010 (tablas para conducción
+   aérea y ósea, con y sin auriculares).
+ • Confirmar con el ensayo EN-02 el piso de ruido real del ICS-43434, incluido el
+   componente 1/f.
+ • Evaluar si RD-02 se eleva de clase 2 a clase 1, ya que el diseño la alcanza sin costo
+   adicional.
+Referencias del capítulo
+[1] IEC 61260-1:2014. Electroacoustics — Octave-band and fractional-octave-band filters — Part 1:
+Specifications.
+[2] ISO 8253-1:2010. Acoustics — Audiometric test methods — Part 1: Pure-tone air and bone
+conduction audiometry.
+[3] Oppenheim, A. V.; Schafer, R. W. Discrete-Time Signal Processing, 3.ª ed. Pearson, 2010.
+[4] Crochiere, R. E.; Rabiner, L. R. Multirate Digital Signal Processing. Prentice Hall, 1983.
+[5] TDK InvenSense. ICS-43434 Multi-Mode Microphone with I2S Digital Output — Data Sheet.
+[6] TDK InvenSense. INMP441 Omnidirectional Microphone with I2S Digital Output — Data Sheet.
+[7] Espressif Systems. ESP-DSP Library — API Reference (dsps_biquad_f32).
+[8] GNU Octave, paquete signal 1.4.5: butter, ellip, zp2sos, sosfilt.
+

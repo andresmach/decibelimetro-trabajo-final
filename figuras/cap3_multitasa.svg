@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="860" viewBox="0 0 1400 860" font-family="Arial, Helvetica, sans-serif">
+<rect width="1400" height="860" fill="#fff"/>
+<rect x="30" y="40" width="200" height="70" rx="8" fill="#dceaf7" stroke="#1e5e9f" stroke-width="2"/>
+<text x="130.0" y="71.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Micrófono I2S</text>
+<text x="130.0" y="94.0" font-size="17" text-anchor="middle" fill="#444">24 bits · 48 kHz</text>
+<line x1="230" y1="75" x2="320" y2="75" stroke="#333" stroke-width="2.2"/>
+<polygon points="320,75 306,68 306,82" fill="#333"/>
+<text x="1240" y="30" font-size="17" text-anchor="middle" fill="#1e5e9f" font-weight="bold">Leq por banda</text>
+<circle cx="330" cy="75" r="6" fill="#333"/>
+<text x="310" y="63" font-size="18" text-anchor="end" fill="#7a4800" font-weight="bold">48 kHz</text>
+<line x1="330" y1="75" x2="520" y2="75" stroke="#333" stroke-width="2.2"/>
+<polygon points="520,75 506,68 506,82" fill="#333"/>
+<rect x="520" y="43" width="250" height="64" rx="8" fill="#fff7e6" stroke="#c77700" stroke-width="2"/>
+<text x="645.0" y="71.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Pasabanda 8 kHz</text>
+<text x="645.0" y="94.0" font-size="17" text-anchor="middle" fill="#444">Butterworth orden 8</text>
+<line x1="770" y1="75" x2="850" y2="75" stroke="#333" stroke-width="2.2"/>
+<polygon points="850,75 836,68 836,82" fill="#333"/>
+<rect x="850" y="47" width="170" height="56" rx="8" fill="#eef5e9" stroke="#2e7d32" stroke-width="2"/>
+<text x="935.0" y="71.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Σ x²[n]</text>
+<text x="935.0" y="94.0" font-size="17" text-anchor="middle" fill="#444">energía por bloque</text>
+<line x1="1020" y1="75" x2="1090" y2="75" stroke="#333" stroke-width="2.2"/>
+<polygon points="1090,75 1076,68 1076,82" fill="#333"/>
+<rect x="1090" y="47" width="290" height="56" rx="8" fill="#e5f4e8" stroke="#2e7d32" stroke-width="2"/>
+<text x="1235.0" y="71.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Leq 8 kHz [dB SPL]</text>
+<text x="1235.0" y="94.0" font-size="17" text-anchor="middle" fill="#444">promedio + calibración</text>
+<rect x="215" y="107.0" width="230" height="44" rx="8" fill="#f3e8f7" stroke="#6a1b9a" stroke-width="2"/>
+<text x="330.0" y="135.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">antialias + ↓2</text>
+<line x1="330" y1="81" x2="330" y2="107.0" stroke="#333" stroke-width="2.2"/>
+<line x1="330" y1="151.0" x2="330" y2="176" stroke="#333" stroke-width="2.2"/>
+<polygon points="330,176 323,162 337,162" fill="#333"/>
+<circle cx="330" cy="183" r="6" fill="#333"/>
+<text x="310" y="171" font-size="18" text-anchor="end" fill="#7a4800" font-weight="bold">24 kHz</text>
+<line x1="330" y1="183" x2="520" y2="183" stroke="#333" stroke-width="2.2"/>
+<polygon points="520,183 506,176 506,190" fill="#333"/>
+<rect x="520" y="151" width="250" height="64" rx="8" fill="#fff7e6" stroke="#c77700" stroke-width="2"/>
+<text x="645.0" y="179.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Pasabanda 4 kHz</text>
+<text x="645.0" y="202.0" font-size="17" text-anchor="middle" fill="#444">Butterworth orden 8</text>
+<line x1="770" y1="183" x2="850" y2="183" stroke="#333" stroke-width="2.2"/>
+<polygon points="850,183 836,176 836,190" fill="#333"/>
+<rect x="850" y="155" width="170" height="56" rx="8" fill="#eef5e9" stroke="#2e7d32" stroke-width="2"/>
+<text x="935.0" y="179.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Σ x²[n]</text>
+<text x="935.0" y="202.0" font-size="17" text-anchor="middle" fill="#444">energía por bloque</text>
+<line x1="1020" y1="183" x2="1090" y2="183" stroke="#333" stroke-width="2.2"/>
+<polygon points="1090,183 1076,176 1076,190" fill="#333"/>
+<rect x="1090" y="155" width="290" height="56" rx="8" fill="#e5f4e8" stroke="#2e7d32" stroke-width="2"/>
+<text x="1235.0" y="179.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Leq 4 kHz [dB SPL]</text>
+<text x="1235.0" y="202.0" font-size="17" text-anchor="middle" fill="#444">promedio + calibración</text>
+<rect x="215" y="215.0" width="230" height="44" rx="8" fill="#f3e8f7" stroke="#6a1b9a" stroke-width="2"/>
+<text x="330.0" y="243.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">antialias + ↓2</text>
+<line x1="330" y1="189" x2="330" y2="215.0" stroke="#333" stroke-width="2.2"/>
+<line x1="330" y1="259.0" x2="330" y2="284" stroke="#333" stroke-width="2.2"/>
+<polygon points="330,284 323,270 337,270" fill="#333"/>
+<circle cx="330" cy="291" r="6" fill="#333"/>
+<text x="310" y="279" font-size="18" text-anchor="end" fill="#7a4800" font-weight="bold">12 kHz</text>
+<line x1="330" y1="291" x2="520" y2="291" stroke="#333" stroke-width="2.2"/>
+<polygon points="520,291 506,284 506,298" fill="#333"/>
+<rect x="520" y="259" width="250" height="64" rx="8" fill="#fff7e6" stroke="#c77700" stroke-width="2"/>
+<text x="645.0" y="287.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Pasabanda 2 kHz</text>
+<text x="645.0" y="310.0" font-size="17" text-anchor="middle" fill="#444">Butterworth orden 8</text>
+<line x1="770" y1="291" x2="850" y2="291" stroke="#333" stroke-width="2.2"/>
+<polygon points="850,291 836,284 836,298" fill="#333"/>
+<rect x="850" y="263" width="170" height="56" rx="8" fill="#eef5e9" stroke="#2e7d32" stroke-width="2"/>
+<text x="935.0" y="287.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Σ x²[n]</text>
+<text x="935.0" y="310.0" font-size="17" text-anchor="middle" fill="#444">energía por bloque</text>
+<line x1="1020" y1="291" x2="1090" y2="291" stroke="#333" stroke-width="2.2"/>
+<polygon points="1090,291 1076,284 1076,298" fill="#333"/>
+<rect x="1090" y="263" width="290" height="56" rx="8" fill="#e5f4e8" stroke="#2e7d32" stroke-width="2"/>
+<text x="1235.0" y="287.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Leq 2 kHz [dB SPL]</text>
+<text x="1235.0" y="310.0" font-size="17" text-anchor="middle" fill="#444">promedio + calibración</text>
+<rect x="215" y="323.0" width="230" height="44" rx="8" fill="#f3e8f7" stroke="#6a1b9a" stroke-width="2"/>
+<text x="330.0" y="351.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">antialias + ↓2</text>
+<line x1="330" y1="297" x2="330" y2="323.0" stroke="#333" stroke-width="2.2"/>
+<line x1="330" y1="367.0" x2="330" y2="392" stroke="#333" stroke-width="2.2"/>
+<polygon points="330,392 323,378 337,378" fill="#333"/>
+<circle cx="330" cy="399" r="6" fill="#333"/>
+<text x="310" y="387" font-size="18" text-anchor="end" fill="#7a4800" font-weight="bold">6 kHz</text>
+<line x1="330" y1="399" x2="520" y2="399" stroke="#333" stroke-width="2.2"/>
+<polygon points="520,399 506,392 506,406" fill="#333"/>
+<rect x="520" y="367" width="250" height="64" rx="8" fill="#fff7e6" stroke="#c77700" stroke-width="2"/>
+<text x="645.0" y="395.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Pasabanda 1 kHz</text>
+<text x="645.0" y="418.0" font-size="17" text-anchor="middle" fill="#444">Butterworth orden 8</text>
+<line x1="770" y1="399" x2="850" y2="399" stroke="#333" stroke-width="2.2"/>
+<polygon points="850,399 836,392 836,406" fill="#333"/>
+<rect x="850" y="371" width="170" height="56" rx="8" fill="#eef5e9" stroke="#2e7d32" stroke-width="2"/>
+<text x="935.0" y="395.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Σ x²[n]</text>
+<text x="935.0" y="418.0" font-size="17" text-anchor="middle" fill="#444">energía por bloque</text>
+<line x1="1020" y1="399" x2="1090" y2="399" stroke="#333" stroke-width="2.2"/>
+<polygon points="1090,399 1076,392 1076,406" fill="#333"/>
+<rect x="1090" y="371" width="290" height="56" rx="8" fill="#e5f4e8" stroke="#2e7d32" stroke-width="2"/>
+<text x="1235.0" y="395.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Leq 1 kHz [dB SPL]</text>
+<text x="1235.0" y="418.0" font-size="17" text-anchor="middle" fill="#444">promedio + calibración</text>
+<rect x="215" y="431.0" width="230" height="44" rx="8" fill="#f3e8f7" stroke="#6a1b9a" stroke-width="2"/>
+<text x="330.0" y="459.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">antialias + ↓2</text>
+<line x1="330" y1="405" x2="330" y2="431.0" stroke="#333" stroke-width="2.2"/>
+<line x1="330" y1="475.0" x2="330" y2="500" stroke="#333" stroke-width="2.2"/>
+<polygon points="330,500 323,486 337,486" fill="#333"/>
+<circle cx="330" cy="507" r="6" fill="#333"/>
+<text x="310" y="495" font-size="18" text-anchor="end" fill="#7a4800" font-weight="bold">3 kHz</text>
+<line x1="330" y1="507" x2="520" y2="507" stroke="#333" stroke-width="2.2"/>
+<polygon points="520,507 506,500 506,514" fill="#333"/>
+<rect x="520" y="475" width="250" height="64" rx="8" fill="#fff7e6" stroke="#c77700" stroke-width="2"/>
+<text x="645.0" y="503.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Pasabanda 500 Hz</text>
+<text x="645.0" y="526.0" font-size="17" text-anchor="middle" fill="#444">Butterworth orden 8</text>
+<line x1="770" y1="507" x2="850" y2="507" stroke="#333" stroke-width="2.2"/>
+<polygon points="850,507 836,500 836,514" fill="#333"/>
+<rect x="850" y="479" width="170" height="56" rx="8" fill="#eef5e9" stroke="#2e7d32" stroke-width="2"/>
+<text x="935.0" y="503.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Σ x²[n]</text>
+<text x="935.0" y="526.0" font-size="17" text-anchor="middle" fill="#444">energía por bloque</text>
+<line x1="1020" y1="507" x2="1090" y2="507" stroke="#333" stroke-width="2.2"/>
+<polygon points="1090,507 1076,500 1076,514" fill="#333"/>
+<rect x="1090" y="479" width="290" height="56" rx="8" fill="#e5f4e8" stroke="#2e7d32" stroke-width="2"/>
+<text x="1235.0" y="503.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Leq 500 Hz [dB SPL]</text>
+<text x="1235.0" y="526.0" font-size="17" text-anchor="middle" fill="#444">promedio + calibración</text>
+<rect x="215" y="539.0" width="230" height="44" rx="8" fill="#f3e8f7" stroke="#6a1b9a" stroke-width="2"/>
+<text x="330.0" y="567.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">antialias + ↓2</text>
+<line x1="330" y1="513" x2="330" y2="539.0" stroke="#333" stroke-width="2.2"/>
+<line x1="330" y1="583.0" x2="330" y2="608" stroke="#333" stroke-width="2.2"/>
+<polygon points="330,608 323,594 337,594" fill="#333"/>
+<circle cx="330" cy="615" r="6" fill="#333"/>
+<text x="310" y="603" font-size="18" text-anchor="end" fill="#7a4800" font-weight="bold">1,5 kHz</text>
+<line x1="330" y1="615" x2="520" y2="615" stroke="#333" stroke-width="2.2"/>
+<polygon points="520,615 506,608 506,622" fill="#333"/>
+<rect x="520" y="583" width="250" height="64" rx="8" fill="#fff7e6" stroke="#c77700" stroke-width="2"/>
+<text x="645.0" y="611.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Pasabanda 250 Hz</text>
+<text x="645.0" y="634.0" font-size="17" text-anchor="middle" fill="#444">Butterworth orden 8</text>
+<line x1="770" y1="615" x2="850" y2="615" stroke="#333" stroke-width="2.2"/>
+<polygon points="850,615 836,608 836,622" fill="#333"/>
+<rect x="850" y="587" width="170" height="56" rx="8" fill="#eef5e9" stroke="#2e7d32" stroke-width="2"/>
+<text x="935.0" y="611.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Σ x²[n]</text>
+<text x="935.0" y="634.0" font-size="17" text-anchor="middle" fill="#444">energía por bloque</text>
+<line x1="1020" y1="615" x2="1090" y2="615" stroke="#333" stroke-width="2.2"/>
+<polygon points="1090,615 1076,608 1076,622" fill="#333"/>
+<rect x="1090" y="587" width="290" height="56" rx="8" fill="#e5f4e8" stroke="#2e7d32" stroke-width="2"/>
+<text x="1235.0" y="611.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Leq 250 Hz [dB SPL]</text>
+<text x="1235.0" y="634.0" font-size="17" text-anchor="middle" fill="#444">promedio + calibración</text>
+<rect x="215" y="647.0" width="230" height="44" rx="8" fill="#f3e8f7" stroke="#6a1b9a" stroke-width="2"/>
+<text x="330.0" y="675.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">antialias + ↓2</text>
+<line x1="330" y1="621" x2="330" y2="647.0" stroke="#333" stroke-width="2.2"/>
+<line x1="330" y1="691.0" x2="330" y2="716" stroke="#333" stroke-width="2.2"/>
+<polygon points="330,716 323,702 337,702" fill="#333"/>
+<circle cx="330" cy="723" r="6" fill="#333"/>
+<text x="310" y="711" font-size="18" text-anchor="end" fill="#7a4800" font-weight="bold">750 Hz</text>
+<line x1="330" y1="723" x2="520" y2="723" stroke="#333" stroke-width="2.2"/>
+<polygon points="520,723 506,716 506,730" fill="#333"/>
+<rect x="520" y="691" width="250" height="64" rx="8" fill="#fff7e6" stroke="#c77700" stroke-width="2"/>
+<text x="645.0" y="719.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Pasabanda 125 Hz</text>
+<text x="645.0" y="742.0" font-size="17" text-anchor="middle" fill="#444">Butterworth orden 8</text>
+<line x1="770" y1="723" x2="850" y2="723" stroke="#333" stroke-width="2.2"/>
+<polygon points="850,723 836,716 836,730" fill="#333"/>
+<rect x="850" y="695" width="170" height="56" rx="8" fill="#eef5e9" stroke="#2e7d32" stroke-width="2"/>
+<text x="935.0" y="719.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Σ x²[n]</text>
+<text x="935.0" y="742.0" font-size="17" text-anchor="middle" fill="#444">energía por bloque</text>
+<line x1="1020" y1="723" x2="1090" y2="723" stroke="#333" stroke-width="2.2"/>
+<polygon points="1090,723 1076,716 1076,730" fill="#333"/>
+<rect x="1090" y="695" width="290" height="56" rx="8" fill="#e5f4e8" stroke="#2e7d32" stroke-width="2"/>
+<text x="1235.0" y="719.0" font-size="21" font-weight="bold" text-anchor="middle" fill="#111">Leq 125 Hz [dB SPL]</text>
+<text x="1235.0" y="742.0" font-size="17" text-anchor="middle" fill="#444">promedio + calibración</text>
+<text x="220" y="820" font-size="18" text-anchor="start" fill="#6a1b9a" font-weight="normal">Antialias: elíptico de orden 6 (3 SOS), ondulación 0,01 dB, rechazo ≥ 80 dB desde 0,382·f_entrada</text>
+<text x="220" y="844" font-size="18" text-anchor="start" fill="#444" font-weight="normal">Todas las bandas trabajan con la misma relación f_m / f_s ≈ 1/6 (radio máximo de polos ≈ 0,90)</text>
+</svg>

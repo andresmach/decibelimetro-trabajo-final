@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="860" viewBox="0 0 1400 860" font-family="Arial, Helvetica, sans-serif">
+<rect width="1400" height="860" fill="#fff"/>
+<text x="700" y="36" font-size="23" text-anchor="middle" fill="#222" font-weight="bold">Árbol de alimentación y señales de gestión de energía (v0.2)</text>
+<rect x="30" y="110" width="180" height="120" rx="8" fill="#f2f2f2" stroke="#666" stroke-width="2"/>
+<text x="120.0" y="155.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">USB-C</text>
+<text x="120.0" y="176.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">CC1/CC2: 5,1 kΩ</text>
+<text x="120.0" y="197.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">TVS en VBUS, D±, CC</text>
+<rect x="280" y="100" width="240" height="150" rx="8" fill="#f3e8f7" stroke="#6a1b9a" stroke-width="2"/>
+<text x="400.0" y="139.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">Cargador BQ24074</text>
+<text x="400.0" y="160.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">camino de potencia</text>
+<text x="400.0" y="181.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">ISET = 0,8 A · ILIM = 1,5 A</text>
+<text x="400.0" y="202.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">OUT = 4,4 V con USB</text>
+<text x="400.0" y="223.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">TS ← NTC 10 kΩ</text>
+<polyline points="210,170 278,170" fill="none" stroke="#6a1b9a" stroke-width="2.4"/>
+<polygon points="278,170 265.0,176.5 265.0,163.5" fill="#6a1b9a"/>
+<text x="244" y="160" font-size="14" text-anchor="middle" fill="#6a1b9a" font-weight="bold">VBUS</text>
+<rect x="280" y="360" width="240" height="120" rx="8" fill="#f3e8f7" stroke="#6a1b9a" stroke-width="2"/>
+<text x="400.0" y="405.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">Celda 18650 3000 mAh</text>
+<text x="400.0" y="426.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">protegida, en portapila</text>
+<text x="400.0" y="447.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">NTC acoplada a la celda</text>
+<rect x="290" y="290" width="220" height="46" rx="8" fill="#fff" stroke="#d62728" stroke-width="2"/>
+<text x="400.0" y="319.0" font-size="15" text-anchor="middle" fill="#111" font-weight="bold">P-MOSFET: polaridad</text>
+<polyline points="390,288 390,252" fill="none" stroke="#6a1b9a" stroke-width="2.4"/>
+<polygon points="390,252 396.5,265.0 383.5,265.0" fill="#6a1b9a"/>
+<polyline points="410,252 410,288" fill="none" stroke="#6a1b9a" stroke-width="2.4"/>
+<polygon points="410,288 403.5,275.0 416.5,275.0" fill="#6a1b9a"/>
+<line x1="400" y1="336" x2="400" y2="358" stroke="#6a1b9a" stroke-width="2.4"/>
+<text x="470" y="275" font-size="14" text-anchor="middle" fill="#6a1b9a" font-weight="bold">BAT</text>
+<rect x="30" y="300" width="210" height="110" rx="8" fill="#fff" stroke="#555" stroke-width="2"/>
+<text x="135.0" y="340.0" font-size="15" text-anchor="middle" fill="#111" font-weight="bold">Comparador de CC</text>
+<text x="135.0" y="361.0" font-size="12" text-anchor="middle" fill="#444" font-weight="normal">nanopotencia, desde OUT</text>
+<text x="135.0" y="382.0" font-size="12" text-anchor="middle" fill="#444" font-weight="normal">CC > 0,66 V → fuente ≥ 1,5 A</text>
+<polyline points="120,230 120,298" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="6,4"/>
+<polyline points="240,330 262,330 262,210 278,210" fill="none" stroke="#555" stroke-width="2.4" stroke-dasharray="7,5"/>
+<polygon points="278,210 265.0,216.5 265.0,203.5" fill="#555"/>
+<text x="30" y="440" font-size="13" text-anchor="start" fill="#555" font-weight="normal">EN1/EN2 por resistencias: USB500 por defecto;</text>
+<text x="30" y="458" font-size="13" text-anchor="start" fill="#555" font-weight="normal">el comparador pasa a ILIM sin el ESP32</text>
+<rect x="600" y="120" width="210" height="110" rx="8" fill="#fff" stroke="#c77700" stroke-width="2"/>
+<text x="705.0" y="160.0" font-size="15" text-anchor="middle" fill="#111" font-weight="bold">Conmutador de encendido</text>
+<text x="705.0" y="181.0" font-size="12" text-anchor="middle" fill="#444" font-weight="normal">P-MOSFET con enclavamiento</text>
+<text x="705.0" y="202.0" font-size="12" text-anchor="middle" fill="#444" font-weight="normal">pulsador + POWER_HOLD</text>
+<polyline points="520,170 598,170" fill="none" stroke="#6a1b9a" stroke-width="2.4"/>
+<polygon points="598,170 585.0,176.5 585.0,163.5" fill="#6a1b9a"/>
+<text x="560" y="160" font-size="14" text-anchor="middle" fill="#6a1b9a" font-weight="bold">OUT</text>
+<line x1="810" y1="170" x2="860" y2="170" stroke="#6a1b9a" stroke-width="2.4"/>
+<text x="840" y="160" font-size="14" text-anchor="middle" fill="#6a1b9a" font-weight="bold">VSYS</text>
+<circle cx="860" cy="170" r="5" fill="#6a1b9a"/>
+<rect x="900" y="100" width="220" height="100" rx="8" fill="#fff7e6" stroke="#c77700" stroke-width="2"/>
+<text x="1010.0" y="135.0" font-size="15" text-anchor="middle" fill="#111" font-weight="bold">LDO 3,3 V digital</text>
+<text x="1010.0" y="156.0" font-size="12" text-anchor="middle" fill="#444" font-weight="normal">≥ 600 mA · SOT-89/DFN</text>
+<text x="1010.0" y="177.0" font-size="12" text-anchor="middle" fill="#444" font-weight="normal">47 µF + 10 µF + 100 nF</text>
+<polyline points="860,150 898,150" fill="none" stroke="#6a1b9a" stroke-width="2.4"/>
+<polygon points="898,150 885.0,156.5 885.0,143.5" fill="#6a1b9a"/>
+<rect x="1170" y="70" width="200" height="70" rx="8" fill="#dceaf7" stroke="#1e5e9f" stroke-width="2"/>
+<text x="1270.0" y="100.5" font-size="16" text-anchor="middle" fill="#111" font-weight="bold">ESP32-S3-WROOM-1</text>
+<text x="1270.0" y="121.5" font-size="13" text-anchor="middle" fill="#444" font-weight="normal">N16R8 (3,3 V)</text>
+<rect x="1170" y="160" width="200" height="60" rx="8" fill="#f2f2f2" stroke="#666" stroke-width="2"/>
+<text x="1270.0" y="196.0" font-size="15" text-anchor="middle" fill="#111" font-weight="bold">TFT · microSD · LED</text>
+<polyline points="1120,140 1145,140 1145,105 1168,105" fill="none" stroke="#c77700" stroke-width="2.4"/>
+<polygon points="1168,105 1155.0,111.5 1155.0,98.5" fill="#c77700"/>
+<text x="1145" y="92" font-size="14" text-anchor="middle" fill="#c77700" font-weight="bold">3V3_D</text>
+<polyline points="1145,140 1145,190 1168,190" fill="none" stroke="#c77700" stroke-width="2.4"/>
+<polygon points="1168,190 1155.0,196.5 1155.0,183.5" fill="#c77700"/>
+<polyline points="860,170 860,330 890,330" fill="none" stroke="#6a1b9a" stroke-width="2.4"/>
+<rect x="890" y="300" width="120" height="60" rx="8" fill="#fff" stroke="#2e7d32" stroke-width="2"/>
+<text x="950.0" y="336.0" font-size="14" text-anchor="middle" fill="#111" font-weight="bold">RC 10 Ω · 10 µF</text>
+<rect x="1040" y="290" width="160" height="80" rx="8" fill="#e5f4e8" stroke="#2e7d32" stroke-width="2"/>
+<text x="1120.0" y="325.5" font-size="16" text-anchor="middle" fill="#111" font-weight="bold">LP5907-3.3</text>
+<text x="1120.0" y="346.5" font-size="13" text-anchor="middle" fill="#444" font-weight="normal">6,5 µVrms</text>
+<polyline points="1010,330 1038,330" fill="none" stroke="#2e7d32" stroke-width="2.4"/>
+<polygon points="1038,330 1025.0,336.5 1025.0,323.5" fill="#2e7d32"/>
+<rect x="1230" y="285" width="140" height="90" rx="8" fill="#dceaf7" stroke="#1e5e9f" stroke-width="2"/>
+<text x="1300.0" y="325.5" font-size="15" text-anchor="middle" fill="#111" font-weight="bold">ICS-43434</text>
+<text x="1300.0" y="346.5" font-size="12" text-anchor="middle" fill="#444" font-weight="normal">ferrita + 100 nF</text>
+<polyline points="1200,330 1228,330" fill="none" stroke="#2e7d32" stroke-width="2.4"/>
+<polygon points="1228,330 1215.0,336.5 1215.0,323.5" fill="#2e7d32"/>
+<text x="1215" y="395" font-size="14" text-anchor="middle" fill="#2e7d32" font-weight="bold">3V3_MIC</text>
+<rect x="600" y="520" width="250" height="100" rx="8" fill="#fff" stroke="#555" stroke-width="2"/>
+<text x="725.0" y="555.0" font-size="15" text-anchor="middle" fill="#111" font-weight="bold">Divisor 2 × 1 MΩ desde BAT</text>
+<text x="725.0" y="576.0" font-size="12" text-anchor="middle" fill="#444" font-weight="normal">+ 100 nF → ADC1 (GPIO1)</text>
+<text x="725.0" y="597.0" font-size="12" text-anchor="middle" fill="#444" font-weight="normal">mide la celda aun cargando</text>
+<polyline points="520,420 560,420 560,570 598,570" fill="none" stroke="#6a1b9a" stroke-width="2" stroke-dasharray="6,4"/>
+<rect x="880" y="520" width="490" height="100" rx="8" fill="#eef5fb" stroke="#1e5e9f" stroke-width="2"/>
+<text x="1125.0" y="555.0" font-size="15" text-anchor="middle" fill="#111" font-weight="bold">Firmware (T_MON)</text>
+<text x="1125.0" y="576.0" font-size="12" text-anchor="middle" fill="#444" font-weight="normal">lee VBAT, /CHG, /PGOOD y "fuente ≥ 1,5 A"; corta con VSYS ≤ 3,50 V</text>
+<text x="1125.0" y="597.0" font-size="12" text-anchor="middle" fill="#444" font-weight="normal">(promedio de 1 s, histéresis 100 mV) liberando POWER_HOLD</text>
+<polyline points="705,230 705,495 1000,495 1000,518" fill="none" stroke="#1e5e9f" stroke-width="2" stroke-dasharray="6,4"/>
+<text x="850" y="488" font-size="13" text-anchor="middle" fill="#1e5e9f" font-weight="normal">POWER_HOLD / botón</text>
+<text x="700" y="690" font-size="15" text-anchor="middle" fill="#333" font-weight="normal">Apagado: protección 3 µA + cargador ≤ 6,5 µA + divisor 2,1 µA + conmutador 1 µA ≈ 12,6 µA (RD-12: ≤ 100 µA).</text>
+<text x="700" y="715" font-size="15" text-anchor="middle" fill="#333" font-weight="normal">Pull-up de /CHG y /PGOOD a 3V3_D (salidas de drenador abierto: sin realimentación con el ESP32 apagado).</text>
+<text x="700" y="740" font-size="15" text-anchor="middle" fill="#333" font-weight="normal">Valores indicativos: se confirman con las hojas de datos al capturar el esquemático (E4).</text>
+</svg>
