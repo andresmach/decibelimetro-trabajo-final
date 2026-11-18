@@ -465,7 +465,8 @@ add([H1('5.11 Conclusiones y decisiones'),
           'térmico del gabinete; NTC y protección de polaridad; consumo del ESP32-S3 más conservador y celda de '
           '3000 mAh; resistencia serie completa y corte a 3,50 V con criterio corregido; divisor sobre BAT; estados '
           'de los pines con el ESP32 apagado; diagrama de hardware por bloques; FMEA; masa y apilado; pull-down de SD, '
-          'filtros RF y malla; normativa ampliada; pruebas PU-HW-08 y PU-HW-09. Registro: '
+          'filtros RF y malla; normativa ampliada; pruebas PU-HW-08 y PU-HW-09. Decisiones propagadas al '
+          'anteproyecto, al anexo de Ingeniería de Software v0.4 y al Capítulo 4. Registro: '
           'revision_egm/registro_cap5_v0.2.md.']],
         [1100, 7737], size=17),
      H1('Referencias del capítulo'),

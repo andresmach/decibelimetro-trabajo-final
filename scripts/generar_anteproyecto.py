@@ -141,9 +141,10 @@ S['Métodos y Técnicas'] = [
       'vectores de referencia generados en Octave, y pruebas de integración en la placa mediante un modo de '
       'prueba que inyecta señales sintéticas.'),
     H2('Hardware'),
-    B('Captura del esquemático y diseño del PCB en KiCad; alimentación a batería Li-ion con cargador USB-C y '
-      'regulador LDO de bajo ruido dedicado al micrófono; separación de planos y rutas de las fuentes de '
-      'ruido digital (Wi-Fi, conmutación).'),
+    B('Captura del esquemático y diseño del PCB de 4 capas en KiCad; alimentación con una celda 18650, cargador '
+      'USB-C con camino de potencia, LDO de 3,3 V y LDO de ultra bajo ruido dedicado al micrófono; encendido por '
+      'pulsador con apagado comandable por el firmware, protección de polaridad y termistor en la celda; '
+      'presupuesto de potencia, análisis térmico y análisis de modos de falla (ver Capítulo 5).'),
     B('Gabinete diseñado en CAD e impreso en 3D, con el micrófono separado del cuerpo para reducir '
       'reflexiones.'),
     H2('Verificación y gestión de configuración'),
@@ -155,11 +156,11 @@ S['Métodos y Técnicas'] = [
 
 S['Material y Equipo'] = [
     T(['Categoría', 'Ítem', 'Disponibilidad'],
-      [['Desarrollo', 'Placa ESP32-S3-DevKitC-1 (N16R8) y ESP32 DevKit v1 del prototipo previo', 'Propio / a adquirir'],
+      [['Desarrollo', 'Placa ESP32-S3-DevKitC-1 (N16R8) para el firmware y ESP32 DevKit v1 del prototipo previo; módulo ESP32-S3-WROOM-1 N16R8 para el PCB propio', 'Propio / a adquirir'],
        ['Sensores', 'Micrófono MEMS I2S ICS-43434 para el instrumento (encapsulado LGA: placa adaptadora o montaje por refusión); INMP441 del prototipo como referencia comparativa', 'Propio / a adquirir'],
-       ['Interfaz', 'Pantalla TFT 2,4–2,8" (SPI), pulsadores, LED bicolor, módulo microSD', 'A adquirir'],
-       ['Energía', 'Celda Li-ion 18650 o LiPo ≈ 2000 mAh, cargador con protección, LDO de bajo ruido', 'A adquirir'],
-       ['Fabricación', 'PCB prototipo (5 unidades), filamento PETG para el gabinete', 'A adquirir'],
+       ['Interfaz', 'Pantalla TFT de 2,8 in (SPI), pulsadores, LED bicolor, zócalo microSD en la placa', 'A adquirir'],
+       ['Energía', 'Celda 18650 de 3000 mAh protegida con portapila; cargador BQ24074; LDO de 3,3 V; LDO LP5907 para el micrófono; comparador de CC, MOSFET y termistor NTC; fuente USB-C de ≥ 1,5 A para los ensayos', 'A adquirir'],
+       ['Fabricación', 'PCB de 4 capas (5 unidades), plantilla de pasta y estación de aire caliente para el micrófono LGA (o módulo comercial con ICS-43434), filamento PETG para el gabinete', 'A adquirir / laboratorio FIUNER'],
        ['Instrumental', 'Osciloscopio, analizador lógico, multímetro, fuente de laboratorio', 'Propio / laboratorio FIUNER'],
        ['Acústica', 'Calibrador acústico 94 dB SPL @ 1 kHz (IEC 60942)', 'A gestionar (FIUNER / externo)'],
        ['Acústica', 'Sonómetro de referencia clase 1 con filtros de octava', 'A gestionar (FIUNER / externo)'],
@@ -198,7 +199,7 @@ R['Requisitos de desempeño HW, SW o FW (incluyendo uso normal, almacenamiento, 
     B('**RD-05** [FW] Exactitud a 1 kHz tras calibración: ±0,5 dB respecto del calibrador.', size=20),
     B('**RD-06** [FW+SW] Integración configurable de 10 a 120 s (30 s por defecto); actualización de la indicación, en pantalla y en el panel web, cada ≤ 250 ms.', size=20),
     B('**RD-07** [FW] Tiempo real sin pérdida de bloques (0 desbordes en 8 h) y uso de CPU del núcleo DSP ≤ 70 %.', size=20),
-    B('**RD-08** [HW] Autonomía ≥ 8 h con Wi-Fi activo; carga completa ≤ 4 h por USB-C.', size=20),
+    B('**RD-08** [HW] Autonomía ≥ 8 h con Wi-Fi activo; carga completa ≤ 4 h por USB-C con una fuente que anuncie ≥ 1,5 A (con una fuente de corriente por defecto, el equipo informa el tiempo estimado).', size=20),
     P('**Almacenamiento**', size=20, after=40, before=60, keep_next=True),
     B('**RD-09** [HW+FW] Registro de ≥ 1000 sesiones en microSD, sin corrupción ante un corte de energía.', size=20),
     B('**RD-12** [HW+FW] Guardado entre −10 y 50 °C y de 10 a 90 % de humedad relativa sin condensación, sin '
@@ -223,9 +224,10 @@ R['Interfaz con el usuario:'] = [
     B('Idioma español; las acciones que borran datos o cambian la calibración piden confirmación.', size=20),
 ]
 R['Características físicas:'] = [
-    P('Equipo de mano, de aproximadamente 160 × 80 × 35 mm y ≤ 350 g. Micrófono en el extremo superior, '
-      'separado del cuerpo; rosca de 1/4" para trípode; conector USB-C; ranura microSD accesible. Gabinete '
-      'prototipo impreso en 3D (PETG).', size=20),
+    P('Equipo de mano: cuerpo de aproximadamente 160 × 80 × 35 mm y ≤ 350 g (estimado: 248 g). Micrófono en una '
+      'placa satélite al extremo de un vástago desmontable de ≈ 100 mm, separado del cuerpo; pulsador de '
+      'encendido; portapila accesible; rosca de 1/4" para trípode; conector USB-C y ranura microSD con tapas. '
+      'Gabinete prototipo impreso en 3D (PETG).', size=20),
 ]
 R['Límites y tolerancias:'] = [
     B('Los límites de ISO 8253-1:2010 se guardan como una tabla configurable (conducción aérea por defecto; '
@@ -236,7 +238,7 @@ R['Límites y tolerancias:'] = [
 ]
 R['Requisitos relacionados al ambiente:'] = [
     P('Uso en interiores: 10 a 35 °C, humedad relativa de 25 a 80 % sin condensación. Almacenamiento: −10 a '
-      '50 °C. Estabilización térmica de 5 min antes de medir. Debe convivir con equipamiento clínico sin '
+      '50 °C. Carga de la celda solo dentro de su ventana de temperatura (termistor NTC). Estabilización térmica de 5 min antes de medir. Debe convivir con equipamiento clínico sin '
       'interferencias apreciables (inmunidad básica) y sin que su propio Wi-Fi degrade la medición.', size=20),
 ]
 R['Vida útil prevista:'] = [
@@ -263,9 +265,12 @@ R['Datos históricos (Eventos adversos/quejas/fallas de diseños previos, etc) -
 ]
 R['Costos:'] = [
     P('Prototipo, materiales estimados (USD, valores de referencia sin impuestos de importación):', size=20),
-    B('ESP32-S3-DevKitC 12 · micrófonos MEMS (×2) 16 · pantalla TFT 10 · microSD + tarjeta 7', size=20),
-    B('batería + cargador/protección 11 · LDO de bajo ruido y pasivos 8 · pulsadores/LED/conectores 5', size=20),
-    B('PCB (5 u.) 20 · gabinete 3D 10 → **total ≈ USD 100 por prototipo**', size=20),
+    B('módulo ESP32-S3-WROOM-1 5 · ICS-43434 y placa satélite 5 · pantalla TFT 9 · microSD 6', size=20),
+    B('celda 18650 y portapila 11,5 · cargador, reguladores, comparador, MOSFET y NTC 6,5 · pasivos y TVS 5 · '
+      'pulsadores/LED/conectores 4', size=20),
+    B('PCB de 4 capas (parte del lote de 5) 20 · gabinete, vástago y cable 12 → **total ≈ USD 84 por prototipo** '
+      '(Capítulo 5)', size=20),
+    B('Desarrollo del firmware: placa ESP32-S3-DevKitC (≈ USD 12) y micrófonos de comparación (≈ USD 16).', size=20),
     P('Calibrador y sonómetro de referencia: préstamo a gestionar (su compra superaría USD 1000). Esfuerzo de '
       'ingeniería estimado: __HORAS__ h.', size=20),
 ]
@@ -305,9 +310,9 @@ S['Ensayos (propuestos para verificación de requerimientos)'] = [
        ['EN-04', 'RD-04', 'Tonos en escalones de 5 dB, de 30 a 100 dB SPL, comparados con el sonómetro de referencia', 'Error de linealidad ≤ ±1,0 dB'],
        ['EN-05', 'RD-01', 'Medición simultánea con el sonómetro de referencia en una sala y en una cabina real (ruido rosa y ambiente)', '±1,5 dB (250 Hz – 4 kHz); ±2 dB (125 Hz y 8 kHz)'],
        ['EN-06', 'RD-06, RD-07', 'Funcionamiento continuo de 8 h con registro de desbordes, uso de CPU, pila y latencia', '0 desbordes; CPU ≤ 70 %; actualización ≤ 250 ms'],
-       ['EN-07', 'RD-08', 'Descarga completa con Wi-Fi activo y medición continua; luego, carga completa', 'Autonomía ≥ 8 h; carga ≤ 4 h'],
+       ['EN-07', 'RD-08', 'Descarga completa con Wi-Fi activo y medición continua; luego, carga completa con una fuente USB-C que anuncie ≥ 1,5 A (y, a título informativo, con una fuente por defecto)', 'Autonomía ≥ 8 h; carga ≤ 4 h'],
        ['EN-08', 'RD-09', '1000 sesiones sintéticas y 50 cortes de energía aleatorios durante la escritura', 'Sin pérdida de sesiones cerradas ni corrupción de archivos'],
-       ['EN-09', 'Ambiente', 'Piso de ruido con Wi-Fi activo frente a inactivo; funcionamiento a 10 y 35 °C (según disponibilidad)', 'Diferencia ≤ 1 dB; deriva ≤ 0,5 dB'],
+       ['EN-09', 'Ambiente', 'Piso de ruido con Wi-Fi activo frente a inactivo y con USB conectado; funcionamiento a 10 y 35 °C (según disponibilidad); descarga electrostática informal y teléfono móvil cercano (PU-HW-09)', 'Diferencia ≤ 1 dB; deriva ≤ 0,5 dB; sin daño ni reinicio'],
        ['EN-10', 'RD-11', 'OTA válida, OTA con imagen corrupta y corte durante la actualización', 'El equipo arranca siempre en una imagen válida'],
        ['EN-11', 'Interfaz', 'Prueba de usabilidad con 3 o más fonoaudiólogos/as: calibrar, medir y obtener el informe sin asistencia', 'Tarea completa en < 5 min; SUS ≥ 70'],
        ['EN-12', 'RD-12', 'Equipo apagado 72 h a −10 °C y 72 h a 50 °C (cámara climática, según disponibilidad); medición del consumo apagado', 'Calibración, configuración y registros intactos; consumo ≤ 100 µA'],
@@ -341,7 +346,7 @@ TAREAS = [
     ('4.2', 'Diseño de la alimentación a batería', 16, [3]),
     ('4.3', 'Esquemático', 20, [3, 4]),
     ('4.4', 'Diseño del PCB', 20, [4]),
-    ('4.5', 'Fabricación y armado', 10, [5]),
+    ('4.5', 'Fabricación, armado y pruebas de hardware (PU-HW)', 10, [5]),
     ('4.6', 'Gabinete', 8, [5, 6]),
     ('5', '##Software de gestión', None, None),
     ('5.1', 'Adaptación del servidor, historial e informe PDF', 30, [6]),

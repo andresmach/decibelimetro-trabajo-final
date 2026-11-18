@@ -21,7 +21,8 @@ ACTUALIZANDO --> INICIO : imagen válida / reiniciar
 ACTUALIZANDO --> REPOSO : imagen corrupta / descartar
 ERROR --> INICIO : reintentar
 state "Cualquier estado" as ANY
-ANY --> APAGADO : batería crítica / cerrar archivos
+ANY --> APAGADO : batería crítica (VSYS ≤ 3,50 V) / cerrar archivos, liberar POWER_HOLD
+REPOSO --> APAGADO : pulsación larga / cerrar archivos, liberar POWER_HOLD
 ANY --> INICIO : falla fatal o TWDT / volcado de memoria, reinicio
 note right of MIDIENDO : escrituras en flash/OTA rechazadas\nen ESPERA, MIDIENDO, CALIBRANDO, MIDIENDO_PISO
 APAGADO --> [*]

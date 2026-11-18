@@ -15,7 +15,7 @@ from cap_common import H1, PB, CAP, EQ, KT, CODE, Figuras, ensamblar  # noqa: E4
 
 TPL, FIG, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
 FIGURA = Figuras(FIG, 'C4')
-VERSION = '0.2 (revisada con el método Elephant–Goldfish)'
+VERSION = '0.2.1 (revisada con el método Elephant–Goldfish; alineada con el Capítulo 5)'
 
 body = []
 add = body.extend
@@ -176,7 +176,7 @@ add([H1('4.3 Arquitectura de tareas propuesta'),
          ['T_UI', '0', '8', 'Notificación', '≈ 235 ms', '6 kB', 'Dibujo de la pantalla'],
          ['T_STOR', '0', '6', 'q_stor', 'D = 1 s', '6 kB', 'Archivos de sesión en la microSD (FAT)'],
          ['T_NET', '0', '5', 'Notificación / red', 'D = 235 ms', '6 kB', 'Servidor HTTP y WebSocket'],
-         ['T_MON', '0', '2', 'Periódica', 'T = 1 s', '3 kB', 'Pilas, CPU, batería'],
+         ['T_MON', '0', '2', 'Periódica', 'T = 1 s', '3 kB', 'Pilas, CPU; dueña del ADC1 (VBAT) y de /CHG, /PGOOD y «fuente ≥ 1,5 A»'],
          ['Wi-Fi, lwIP, esp_timer', '0', '18–23', 'ESP-IDF', '—', 'IDF', 'Sistema (fijadas al núcleo 0)'],
          ['IPC1', '1', '24', 'ESP-IDF', 'Esporádica', 'IDF', 'Servicios entre núcleos (p. ej. flash)']],
         [1300, 800, 700, 1700, 1500, 650, 2187], size=16, center_cols=(1, 2, 5)),
@@ -201,7 +201,7 @@ add([H1('4.4 Comunicación y sincronización'),
           'CALIBRAR, PISO, DETENER y REPOSO; T_DSP los aplica en el borde de bloque'],
          ['q_res', 'Cola', 'T_DSP → T_APP', '4 × 96 B', 'Resultado cada 11 bloques: L_eq parcial y acumulado por '
           'banda, bloques, descriptores perdidos y C máximo. Envío sin espera; si se llena, se cuenta'],
-         ['q_evt', 'Cola', 'ISR GPIO, T_NET, T_UI, T_STOR → T_APP', '16 × 32 B', 'Eventos de pulsadores, comandos '
+         ['q_evt', 'Cola', 'ISR GPIO, T_NET, T_UI, T_STOR, T_MON → T_APP', '16 × 32 B', 'Eventos de pulsadores, comandos '
           'remotos y confirmaciones; desde la ISR con xQueueSendFromISR'],
          ['mbx', 'Cola de longitud 1', 'T_APP → T_UI, T_NET', '1 × 128 B', 'xQueueOverwrite / xQueuePeek: siempre la '
           'última instantánea, sin acumular atraso; aviso con xTaskNotifyGive'],
@@ -394,7 +394,8 @@ add([H1('4.6 Anillo DMA, flash y gestión de energía'),
      P('**Decisión D4.4** (candados de energía durante la medición y frecuencia reducida en REPOSO). Su aporte a '
        'RD-08 es acotado: con el punto de acceso Wi-Fi activo la radio no duerme, así que el ahorro en REPOSO '
        'proviene sobre todo de la frecuencia de CPU y del brillo de la pantalla. La autonomía se verifica con '
-       'EN-07; si no alcanza, se evaluará apagar el Wi-Fi tras un tiempo sin clientes.')])
+       'EN-07. El Capítulo 5 estima 9,0 h en el peor caso al fin de vida de la celda, de modo que apagar el Wi-Fi '
+       'tras un tiempo sin clientes queda solo como mitigación si EN-07 muestra menos margen.')])
 
 # ───────────── 4.7 ─────────────
 add([H1('4.7 Robustez y supervisión'),
@@ -412,7 +413,8 @@ add([H1('4.7 Robustez y supervisión'),
           'histograma', 'Publicado en q_res; alarma en funcionamiento si C > T/2 = 10,7 ms'],
          ['Fallas fatales', 'Volcado de memoria en una partición de flash', 'Descarga desde el panel técnico'],
          ['Caída de tensión', 'Detector de caída de tensión (brown-out) y lectura de batería en T_MON',
-          'Batería crítica: T_APP cierra la sesión y los archivos y apaga (estado APAGADO)'],
+          'Batería crítica (VSYS ≤ 3,50 V con carga, promedio de 1 s, histéresis de 100 mV; Capítulo 5): T_APP '
+          'cierra la sesión y los archivos y libera POWER_HOLD, lo que corta la alimentación (estado APAGADO)'],
          ['Falla de la microSD', 'T_STOR informa el error por evento', 'La sesión queda en RAM y se reintenta; '
           'T_DSP nunca espera a T_STOR']],
         [2000, 3800, 3037], size=16),
@@ -506,7 +508,10 @@ add([H1('4.9 Conclusiones y decisiones'),
           'driver y T_DSP en REPOSO; nuevo hallazgo H4.4 (NVS desde la tarea DSP); simulación del conjunto de '
           'búferes con métrica corregida; alternativas, EDF, pseudocódigo y diagrama de secuencia; pruebas '
           'PU-RT-07 a 09. Decisiones propagadas al anteproyecto y al anexo de Ingeniería de Software v0.3. '
-          'Registro: revision_egm/registro_cap4_v0.2.md.']],
+          'Registro: revision_egm/registro_cap4_v0.2.md.'],
+         ['0.2.1', 'Alineación con el Capítulo 5: T_MON dueña de la lectura de batería y de las señales del cargador '
+          '(eventos a q_evt); umbral de batería crítica de 3,50 V filtrado; apagado real liberando POWER_HOLD; '
+          'margen de autonomía referido al Capítulo 5.']],
         [1100, 7737], size=17),
      H1('Referencias del capítulo'),
      *[P(r, size=20, align='left') for r in [

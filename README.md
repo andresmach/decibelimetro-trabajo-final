@@ -48,11 +48,11 @@ Los documentos se editan en los scripts, no en los `.docx`.
 
 | Documento | Versión |
 |---|---|
-| Anteproyecto | alineado con los Cap. 3 y 4 |
-| Anexo de Ingeniería de Software | 0.3 |
+| Anteproyecto | alineado con los Cap. 3, 4 y 5 |
+| Anexo de Ingeniería de Software | 0.4 |
 | Cap. 3 — DSP | 0.2 |
-| Cap. 4 — Tiempo real | 0.2 |
-| Cap. 5 — Hardware | 0.2 (cambios en otros documentos pendientes de aprobación) |
+| Cap. 4 — Tiempo real | 0.2.1 |
+| Cap. 5 — Hardware | 0.2 |
 
 ## Aviso
 

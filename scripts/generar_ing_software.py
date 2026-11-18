@@ -39,7 +39,7 @@ add([P('', after=600),
         size=24, align='center', after=1400),
       P('**Autor:** Andrés Machtey', size=26, align='left', after=120),
       P('**Director propuesto:** Esp. Víctor Valotto (FIUNER)', size=26, align='left', after=120),
-      P('**Versión:** 0.3 (alineada con los Capítulos 3 y 4) · Noviembre de 2026', size=26, align='left', after=120),
+      P('**Versión:** 0.4 (alineada con los Capítulos 3, 4 y 5) · Noviembre de 2026', size=26, align='left', after=120),
       PB()])
 
 # ───────────── 1. Propósito ─────────────
@@ -51,6 +51,9 @@ add([H1('1. Propósito y alcance'),
        'alternativos y postcondiciones.'),
      P('El documento se irá refinando en cada iteración del proyecto; la versión inicial corresponde al '
        'entregable **E1** del plan de trabajo.'),
+     P('**Cambios de la versión 0.4:** eventos de USB conectado y desconectado (modo de carga y tiempo estimado), '
+       'batería baja y batería crítica con apagado real por el enclavamiento POWER_HOLD, pulsación larga para '
+       'apagar y medición con USB conectado (Capítulo 5); pruebas PU-HW en la matriz de trazabilidad.', size=20),
      P('**Cambios de la versión 0.3:** estado ESPERA (3 s) entre REPOSO y MIDIENDO; rechazo de escrituras en '
        'flash y OTA durante la medición (decisión D4.3 del Capítulo 4); transiciones por imagen OTA corrupta, '
        'falla fatal y desborde del anillo DMA; marca «con pérdidas» en CU-02 y CU-05; microSD con error en '
@@ -146,10 +149,11 @@ add(spec('CU-02', 'Medir cabina', dict(
          '7. El sistema guarda la sesión en la microSD y la envía al servidor de gestión si está disponible.',
     alt='1a. Calibración vencida: el sistema avisa y permite medir solo en modo «indicativo», que queda marcado en el informe.\n'
         '1b. Piso de ruido no medido: se usa el piso típico de la hoja de datos y la sesión queda marcada.\n'
+        '2a. USB conectado: se permite medir; la sesión queda marcada «medida con USB conectado».\n'
         '4a. El usuario detiene la medición: la sesión se guarda como «interrumpida», sin veredicto.\n'
         '4b. Banda saturada: se marca «saturada»; como el nivel supera cualquier límite de la norma, la banda no cumple.\n'
 
-        '4c. Batería crítica: el sistema cierra y guarda la sesión de forma segura antes de apagarse.\n'
+        '4c. Batería crítica (VSYS ≤ 3,50 V con carga, promediada 1 s): el sistema cierra y guarda la sesión y se apaga liberando el enclavamiento de alimentación.\n'
         '4d. Desborde del anillo DMA: la medición continúa y la sesión se marca «con pérdidas», con la cantidad de muestras perdidas.\n'
         '4e. Pedido de escritura en flash (calibración, configuración u OTA): se rechaza hasta volver a REPOSO.\n'
         '5a. Banda cercana al piso de ruido propio: se aplica la regla de piso (CU-03, paso 1a).\n'
@@ -294,7 +298,10 @@ add([H1('5. Máquina de estados del firmware'),
         ['MIDIENDO', 'Fin del tiempo de integración', 'Evaluar ISO, guardar sesión', 'RESULTADO'],
         ['MIDIENDO', 'Detener', 'Guardar sesión interrumpida', 'REPOSO'],
         ['RESULTADO', 'Aceptar / timeout de 60 s', 'Deshabilitar canal; liberar candado de energía', 'REPOSO'],
-        ['Cualquiera', 'Batería crítica', 'Cerrar archivos, apagar', 'APAGADO'],
+        ['Cualquiera', 'Batería crítica (VSYS ≤ 3,50 V con carga, promedio de 1 s)', 'Cerrar sesión y archivos; liberar POWER_HOLD', 'APAGADO'],
+        ['REPOSO, RESULTADO', 'Pulsación larga del botón de encendido', 'Cerrar archivos; liberar POWER_HOLD', 'APAGADO'],
+        ['Cualquiera', 'Batería baja (≈ 15 %)', 'Aviso en pantalla y en el panel', '(sin cambio)'],
+        ['Cualquiera', 'USB conectado / desconectado', 'Informar modo de carga («fuente ≥ 1,5 A» o por defecto) y tiempo estimado', '(sin cambio)'],
         ['REPOSO', 'Medir piso de ruido (técnico)', 'Reiniciar filtros, descartar 0,5 s', 'MIDIENDO_PISO'],
         ['MIDIENDO_PISO', 'Fin de 60 s y confirmación', 'Guardar L_piso por banda en NVS', 'REPOSO'],
         ['MIDIENDO_PISO', 'Cancelar', 'Descartar', 'REPOSO'],
@@ -362,16 +369,16 @@ add([H1('6. Historias de usuario'),
 TRZ = [
     ('RD-01', 'CU-02, CU-03', 'HU-01, HU-02', 'PU-DSP-02', 'EN-05'),
     ('RD-02', 'CU-03', 'HU-02, HU-13', 'PU-DSP-01', 'EN-01'),
-    ('RD-03', 'CU-02, CU-03, CU-10', 'HU-14', '—', 'EN-02'),
+    ('RD-03', 'CU-02, CU-03, CU-10', 'HU-14', 'PU-HW-01', 'EN-02'),
     ('RD-04', 'CU-02', 'HU-01', 'PU-DSP-04', 'EN-04'),
     ('RD-05', 'CU-01', 'HU-03', 'PU-DSP-03, PU-RT-08', 'EN-03'),
     ('RD-06', 'CU-02, CU-04, CU-07', 'HU-07, HU-10', '—', 'EN-06'),
     ('RD-07', 'CU-02', 'HU-01', 'PU-DSP-02, PU-RT-02, PU-RT-03, PU-RT-04', 'EN-06'),
-    ('RD-08', 'CU-02', 'HU-06', 'PU-RT-07', 'EN-07'),
+    ('RD-08', 'CU-02', 'HU-06', 'PU-RT-07, PU-HW-02, PU-HW-05', 'EN-07'),
     ('RD-09', 'CU-02, CU-05, CU-06, CU-09', 'HU-08, HU-09, HU-12', 'PU-RT-06', 'EN-08'),
     ('RD-10', 'CU-01', 'HU-03, HU-04', '—', 'EN-03'),
     ('RD-11', 'CU-08', 'HU-11', 'PU-RT-01, PU-RT-05', 'EN-10'),
-    ('RD-12', '— (no funcional)', 'HU-15', '—', 'EN-12'),
+    ('RD-12', '— (no funcional)', 'HU-15', 'PU-HW-03, PU-HW-04', 'EN-12'),
     ('RD-13', '— (no funcional)', 'HU-16', '—', 'EN-13'),
     ('Interfaz', 'CU-02, CU-04, CU-05', 'HU-01, HU-07, HU-08', '—', 'EN-11'),
     ('Ambiente', 'CU-02, CU-10', '—', '—', 'EN-09'),
@@ -383,8 +390,9 @@ add([H1('7. Matriz de trazabilidad'),
        [1200, 2450, 2100, 2000, 1087], size=17, center_cols=(0, 4)),
      P('RD-12 y RD-13 son requisitos no funcionales (almacenamiento y manipulación): no tienen un caso de uso '
        'propio y se verifican directamente con ensayos. Las pruebas PU-DSP se definen en el Capítulo 3 '
-       '(sección 3.10) y las PU-RT en el Capítulo 4 (sección 4.8); PU-RT-09 (perro guardián) verifica la '
-       'decisión D4.8 y no un requisito RD.', size=18, italic=True),
+       '(sección 3.10), las PU-RT en el Capítulo 4 (sección 4.8) y las PU-HW en el Capítulo 5 (sección 5.10). '
+       'PU-RT-09 (perro guardián) y PU-HW-06 a PU-HW-09 (térmica, señal, polaridad, descarga electrostática) '
+       'verifican decisiones de diseño, no un requisito RD.', size=18, italic=True),
      H1('8. Notas para Enterprise Architect'),
      B('Crear un paquete por vista: «Requisitos» (elementos Requirement RD-xx), «Casos de uso» (diagrama de '
        'la Figura 1), «Comportamiento» (máquina de estados) y «Verificación» (elementos Test EN-xx).'),
