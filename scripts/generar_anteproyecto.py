@@ -39,12 +39,6 @@ S['Resumen'] = [
       '**APTA / NO APTA** en el lugar. El equipo funcionará a batería, con pantalla y botones propios, '
       'registrará cada sesión en una tarjeta microSD y publicará los datos por Wi-Fi a un panel web desde '
       'el que se obtiene el historial y el informe imprimible.'),
-    P('El trabajo parte de un prototipo desarrollado en el curso de Procesamiento Digital de Señales '
-      '(ESP32 + INMP441 conectado a una PC). Su análisis permitió identificar fallas de diseño, como filtros '
-      'de octava fuera de especificación, dependencia de una PC y un margen de ruido propio insuficiente, '
-      'que el presente proyecto corrige aplicando técnicas propias de la especialización: arquitectura de '
-      'firmware en capas sobre RTOS, procesamiento multitasa de tiempo real, diseño de hardware de bajo '
-      'ruido y bajo consumo, ingeniería de requisitos y verificación sistemática mediante ensayos.'),
 ]
 
 S['Objetivo General'] = [
