@@ -516,7 +516,12 @@ doc = doc[:prev] + '</w:tbl>' + P('', after=60) + doc[m.start():]
 # Saltos de página antes de los títulos largos
 for label in ('Requerimientos', 'Diagrama de Gantt'):
     m = find_para(label)
-    doc = doc[:m.start()] + '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' + doc[m.start():]
+    assert '<w:pStyle w:val="Normal"/>' in m.group(0)
+    vacio = re.search(r'<w:p><w:pPr>(?:(?!</w:p>).)*?</w:pPr></w:p>$', doc[:m.start()])
+    if vacio:   # un párrafo vacío antes del salto dejaría una página en blanco
+        doc = doc[:vacio.start()] + doc[m.start():]
+        m = find_para(label)
+    doc = doc[:m.start()] + m.group(0).replace('<w:pStyle w:val="Normal"/>', '<w:pStyle w:val="Normal"/><w:pageBreakBefore/>', 1) + doc[m.end():]
 
 # Títulos de la plantilla: mantener con el párrafo siguiente
 for label in list(S) + ['Requerimientos']:
