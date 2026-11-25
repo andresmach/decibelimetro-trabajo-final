@@ -86,7 +86,7 @@
 <text x="1125.0" y="597.0" font-size="12" text-anchor="middle" fill="#444" font-weight="normal">(promedio de 1 s, histéresis 100 mV) liberando POWER_HOLD</text>
 <polyline points="705,230 705,495 1000,495 1000,518" fill="none" stroke="#1e5e9f" stroke-width="2" stroke-dasharray="6,4"/>
 <text x="850" y="488" font-size="13" text-anchor="middle" fill="#1e5e9f" font-weight="normal">POWER_HOLD / botón</text>
-<text x="700" y="690" font-size="15" text-anchor="middle" fill="#333" font-weight="normal">Apagado: protección 3 µA + cargador ≤ 6,5 µA + divisor 2,1 µA + conmutador 1 µA ≈ 12,6 µA (RD-12: ≤ 100 µA).</text>
+<text x="700" y="690" font-size="15" text-anchor="middle" fill="#333" font-weight="normal">Apagado: protección 3 µA + cargador ≤ 6,5 µA + divisor 2,1 µA + conmutador 1 µA + RTC 0,05 µA ≈ 12,65 µA (RD-12: ≤ 100 µA).</text>
 <text x="700" y="715" font-size="15" text-anchor="middle" fill="#333" font-weight="normal">Pull-up de /CHG y /PGOOD a 3V3_D (salidas de drenador abierto: sin realimentación con el ESP32 apagado).</text>
 <text x="700" y="740" font-size="15" text-anchor="middle" fill="#333" font-weight="normal">Valores indicativos: se confirman con las hojas de datos al capturar el esquemático (E4).</text>
 </svg>

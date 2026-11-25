@@ -27,6 +27,8 @@ CARGAS = [  # nombre, modo medición, modo reposo, peor caso
     ('microSD (promedio con escrituras)', 1.0, 0.5, 3.0),
     ('LED bicolor (promedio)', 2.0, 1.0, 5.0),
     ('Micrófono ICS-43434 (alto desempeño)', 0.49, 0.0, 0.49),
+    ('Transmisión Wi-Fi a 4 paneles (Cap. 6, supuesto)', 7.0, 1.0, 7.0),
+    ('RTC con cristal (I2C, en marcha)', 0.01, 0.01, 0.01),
     ('Reposo de reguladores, comparador y divisor', 0.2, 0.2, 0.2),
 ]
 out('== 1) Presupuesto de consumo (supuestos) ==')
@@ -156,11 +158,12 @@ out(f'C ≥ ΔI·Δt/ΔV = {dI}·{dt * 1e6:.0f} µs/{dV} V = {dI * dt / dV * 1e6
 # ── 9) Apagado ──
 out('\n== 9) Corriente de batería con el equipo apagado ==')
 OFF = [('Protección de la celda', 3.0), ('Cargador sin entrada (IBAT(PDWN) típ. 4,3 / máx. 6,5)', 6.5),
-       ('Divisor de batería 2 × 1 MΩ', 2.1), ('Conmutador de encendido y fugas', 1.0)]
+       ('Divisor de batería 2 × 1 MΩ', 2.1), ('Conmutador de encendido y fugas', 1.0),
+       ('RTC en respaldo desde la celda (típ. 45 nA)', 0.05)]
 s = sum(i for _, i in OFF)
 for n, i in OFF:
-    out(f'{n:55s} {i:4.1f} µA')
-out(f'{"TOTAL (con la fuga máxima del cargador)":55s} {s:4.1f} µA (RD-12: ≤ 100 µA)')
+    out(f'{n:55s} {i:5.2f} µA')
+out(f'{"TOTAL (con la fuga máxima del cargador)":55s} {s:5.2f} µA (RD-12: ≤ 100 µA)')
 quim = cap * 0.03 * 3
 elec = s * 24 * 91 / 1000
 out(f'3 meses: química ≈ {quim:.0f} mAh + electrónica {elec:.0f} mAh → queda ≈ {100 - (quim + elec) / cap * 100:.0f} %')

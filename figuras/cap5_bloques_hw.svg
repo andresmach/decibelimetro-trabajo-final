@@ -20,7 +20,13 @@
 <text x="1190.0" y="151.5" font-size="13" text-anchor="middle" fill="#444" font-weight="normal">controlador ILI9341 (o similar)</text>
 <polyline points="880,300 950,300 950,135 1038,135" fill="none" stroke="#555" stroke-width="2.4"/>
 <polygon points="1038,135 1025.0,141.5 1025.0,128.5" fill="#555"/>
-<text x="1000" y="220" font-size="14" text-anchor="middle" fill="#555" font-weight="bold">SPI2: CS, MOSI, SCLK, DC, RST, PWM</text>
+<text x="1080" y="220" font-size="14" text-anchor="middle" fill="#555" font-weight="bold">SPI2: CS, MOSI, SCLK, DC, PWM</text>
+<rect x="560" y="90" width="280" height="90" rx="8" fill="#fff7e6" stroke="#c77700" stroke-width="2"/>
+<text x="700.0" y="130.5" font-size="15" text-anchor="middle" fill="#111" font-weight="bold">RTC con cristal 32 kHz</text>
+<text x="700.0" y="151.5" font-size="12" text-anchor="middle" fill="#444" font-weight="normal">respaldo desde la celda · ≈ 45 nA</text>
+<polyline points="700,180 700,248" fill="none" stroke="#c77700" stroke-width="2.4"/>
+<polygon points="700,248 693.5,235.0 706.5,235.0" fill="#c77700"/>
+<text x="780" y="222" font-size="14" text-anchor="middle" fill="#c77700" font-weight="bold">I2C: SDA 13, SCL 21</text>
 <rect x="1040" y="330" width="300" height="90" rx="8" fill="#f2f2f2" stroke="#666" stroke-width="2"/>
 <text x="1190.0" y="370.5" font-size="16" text-anchor="middle" fill="#111" font-weight="bold">Zócalo microSD</text>
 <text x="1190.0" y="391.5" font-size="13" text-anchor="middle" fill="#444" font-weight="normal">detección de tarjeta</text>

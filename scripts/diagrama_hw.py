@@ -89,7 +89,7 @@ box(880, 520, 490, 100, ['Firmware (T_MON)', 'lee VBAT, /CHG, /PGOOD y "fuente �
                           '(promedio de 1 s, histéresis 100 mV) liberando POWER_HOLD'], '#eef5fb', '#1e5e9f', size=15)
 a('<polyline points="705,230 705,495 1000,495 1000,518" fill="none" stroke="#1e5e9f" stroke-width="2" stroke-dasharray="6,4"/>')
 text(850, 488, 'POWER_HOLD / botón', 13, color='#1e5e9f')
-text(700, 690, 'Apagado: protección 3 µA + cargador ≤ 6,5 µA + divisor 2,1 µA + conmutador 1 µA ≈ 12,6 µA (RD-12: ≤ 100 µA).',
+text(700, 690, 'Apagado: protección 3 µA + cargador ≤ 6,5 µA + divisor 2,1 µA + conmutador 1 µA + RTC 0,05 µA ≈ 12,65 µA (RD-12: ≤ 100 µA).',
      15, color='#333')
 text(700, 715, 'Pull-up de /CHG y /PGOOD a 3V3_D (salidas de drenador abierto: sin realimentación con el ESP32 apagado).',
      15, color='#333')
@@ -164,7 +164,9 @@ box(60, 90, 300, 110, ['Placa satélite (J2)', 'ICS-43434 · 3V3_MIC', 'pull-dow
 arrow([(360, 140), (450, 140), (450, 300), (518, 300)], '#1e5e9f', label='I2S: BCLK, WS, SD (33 Ω serie)', lpos=(300, 232))
 text(300, 252, 'cable apantallado 5 cond. + malla, ≈ 15 cm', 13, color='#1e5e9f')
 box(1040, 90, 300, 90, ['Pantalla TFT de 2,8 in', 'controlador ILI9341 (o similar)'], '#f2f2f2', '#666', size=16)
-arrow([(880, 300), (950, 300), (950, 135), (1038, 135)], '#555', label='SPI2: CS, MOSI, SCLK, DC, RST, PWM', lpos=(1000, 220))
+arrow([(880, 300), (950, 300), (950, 135), (1038, 135)], '#555', label='SPI2: CS, MOSI, SCLK, DC, PWM', lpos=(1080, 220))
+box(560, 90, 280, 90, ['RTC con cristal 32 kHz', 'respaldo desde la celda · ≈ 45 nA'], '#fff7e6', '#c77700', size=15)
+arrow([(700, 180), (700, 248)], '#c77700', label='I2C: SDA 13, SCL 21', lpos=(780, 222))
 box(1040, 330, 300, 90, ['Zócalo microSD', 'detección de tarjeta'], '#f2f2f2', '#666', size=16)
 arrow([(880, 375), (1038, 375)], '#555', label='SDMMC 1 bit', lpos=(960, 365))
 box(1040, 470, 300, 90, ['Pulsadores (3) · LED bicolor', 'TVS en las entradas'], '#f2f2f2', '#666', size=16)

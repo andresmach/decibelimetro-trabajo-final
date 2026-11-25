@@ -18,7 +18,9 @@ MIDIENDO_PISO --> REPOSO : fin 60 s y confirmado / guardar L_piso (NVS)
 MIDIENDO_PISO --> REPOSO : cancelar / descartar
 REPOSO --> ACTUALIZANDO : OTA (técnico)
 ACTUALIZANDO --> INICIO : imagen válida / reiniciar
-ACTUALIZANDO --> REPOSO : imagen corrupta / descartar
+ACTUALIZANDO --> REPOSO : imagen corrupta o sin firma / descartar
+ACTUALIZANDO --> REPOSO : 30 s sin datos / abortar
+INICIO --> INICIO : verificación pendiente fallida / revertir
 ERROR --> INICIO : reintentar
 state "Cualquier estado" as ANY
 ANY --> APAGADO : batería crítica (VSYS ≤ 3,50 V) / cerrar archivos, liberar POWER_HOLD

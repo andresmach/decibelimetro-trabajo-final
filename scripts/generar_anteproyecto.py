@@ -130,7 +130,9 @@ S['Métodos y Técnicas'] = [
     B('Medición de tiempos de ejecución con el contador de ciclos de la CPU, de uso de CPU y de margen de '
       'pila; contador de desbordes del anillo DMA; perro guardián de tareas y volcado de memoria ante fallas.'),
     B('Servidor HTTP y WebSocket embebido, sistema de archivos FAT en microSD, NVS para calibración y '
-      'configuración, y actualización OTA con particiones duales.'),
+      'configuración, y actualización OTA firmada con particiones factory, ota_0 y ota_1 y reversión '
+      'automática; protocolo JSON versionado sobre WebSocket, punto de acceso WPA2/WPA3 y reloj de tiempo real '
+      'con sincronización de la hora desde el navegador (ver Capítulo 6).'),
     B('Pruebas unitarias de los módulos DSP en el host (framework Unity) y en el microcontrolador, con '
       'vectores de referencia generados en Octave, y pruebas de integración en la placa mediante un modo de '
       'prueba que inyecta señales sintéticas.'),
@@ -152,12 +154,13 @@ S['Material y Equipo'] = [
     T(['Categoría', 'Ítem', 'Disponibilidad'],
       [['Desarrollo', 'Placa ESP32-S3-DevKitC-1 (N16R8) para el firmware y ESP32 DevKit v1 del prototipo previo; módulo ESP32-S3-WROOM-1 N16R8 para el PCB propio', 'Propio / a adquirir'],
        ['Sensores', 'Micrófono MEMS I2S ICS-43434 para el instrumento (encapsulado LGA: placa adaptadora o montaje por refusión); INMP441 del prototipo como referencia comparativa', 'Propio / a adquirir'],
-       ['Interfaz', 'Pantalla TFT de 2,8 in (SPI), pulsadores, LED bicolor, zócalo microSD en la placa', 'A adquirir'],
+       ['Interfaz', 'Pantalla TFT de 2,8 in (SPI), pulsadores, LED bicolor, zócalo microSD en la placa; RTC con cristal y respaldo desde la celda', 'A adquirir'],
        ['Energía', 'Celda 18650 de 3000 mAh protegida con portapila; cargador BQ24074; LDO de 3,3 V; LDO LP5907 para el micrófono; comparador de CC, MOSFET y termistor NTC; fuente USB-C de ≥ 1,5 A para los ensayos', 'A adquirir'],
        ['Fabricación', 'PCB de 4 capas (5 unidades), plantilla de pasta y estación de aire caliente para el micrófono LGA (o módulo comercial con ICS-43434), filamento PETG para el gabinete', 'A adquirir / laboratorio FIUNER'],
        ['Instrumental', 'Osciloscopio, analizador lógico, multímetro, fuente de laboratorio', 'Propio / laboratorio FIUNER'],
        ['Acústica', 'Calibrador acústico 94 dB SPL @ 1 kHz (IEC 60942)', 'A gestionar (FIUNER / externo)'],
        ['Acústica', 'Sonómetro de referencia clase 1 con filtros de octava', 'A gestionar (FIUNER / externo)'],
+       ['Comunicaciones', 'Celulares de prueba (2 Android de versiones distintas y 1 iOS), PC con analizador de Wi-Fi para medir RSSI, ocupación del canal y latencia', 'Propio / préstamo'],
        ['Ensayo de campo', 'Acceso a una cabina audiométrica en uso', 'A gestionar (servicio de fonoaudiología)'],
        ['Software', 'ESP-IDF v5.x, GNU Octave + paquete signal, gnuplot, Python 3 (FastAPI), KiCad, FreeCAD, Enterprise Architect, Git', 'Libre / licencia académica'],
        ['Equipo de trabajo', 'PC con Linux, parlante y placa de audio para generar tonos de prueba', 'Propio']],
@@ -214,7 +217,8 @@ R['Interfaz con el usuario:'] = [
       'la batería y de la calibración; 3 pulsadores (medir, calibrar, menú) y un LED bicolor visible desde '
       'fuera de la cabina.', size=20),
     B('**Remota:** el equipo genera su propio punto de acceso Wi-Fi (no requiere internet) con un panel web en '
-      'tiempo real, historial de sesiones, descarga CSV e informe PDF.', size=20),
+      'tiempo real, historial de sesiones, descarga CSV e informe HTML imprimible servido por el propio equipo '
+      '(el servidor de gestión opcional genera además el PDF).', size=20),
     B('Idioma español; las acciones que borran datos o cambian la calibración piden confirmación.', size=20),
 ]
 R['Características físicas:'] = [
@@ -261,8 +265,8 @@ R['Costos:'] = [
     P('Prototipo, materiales estimados (USD, valores de referencia sin impuestos de importación):', size=20),
     B('módulo ESP32-S3-WROOM-1 5 · ICS-43434 y placa satélite 5 · pantalla TFT 9 · microSD 6', size=20),
     B('celda 18650 y portapila 11,5 · cargador, reguladores, comparador, MOSFET y NTC 6,5 · pasivos y TVS 5 · '
-      'pulsadores/LED/conectores 4', size=20),
-    B('PCB de 4 capas (parte del lote de 5) 20 · gabinete, vástago y cable 12 → **total ≈ USD 84 por prototipo** '
+      'pulsadores/LED/conectores 4 · RTC con cristal 2', size=20),
+    B('PCB de 4 capas (parte del lote de 5) 20 · gabinete, vástago y cable 12 → **total ≈ USD 86 por prototipo** '
       '(Capítulo 5)', size=20),
     B('Desarrollo del firmware: placa ESP32-S3-DevKitC (≈ USD 12) y micrófonos de comparación (≈ USD 16).', size=20),
     P('Calibrador y sonómetro de referencia: préstamo a gestionar (su compra superaría USD 1000). Esfuerzo de '
@@ -280,7 +284,9 @@ R['Otros requisitos esenciales para el diseño:'] = [
     B('Arquitectura de firmware modular y testeable; estilo de codificación según BARR-C / guía MISRA-C.', size=20),
     B('Trazabilidad entre requisitos, casos de uso, historias de usuario y ensayos (documento anexo de '
       'Ingeniería de Software).', size=20),
-    B('Wi-Fi protegido con WPA2 y contraseña configurable; sin datos de pacientes.', size=20),
+    B('Wi-Fi protegido con WPA2/WPA3 y PMF, con contraseña aleatoria distinta por equipo (configurable); '
+      'operaciones de técnico con PIN de 6 dígitos por desafío y respuesta; actualizaciones solo firmadas; sin '
+      'datos de pacientes (Capítulo 6).', size=20),
     B('Código abierto (licencia MIT) y documentación reproducible.', size=20),
 ]
 
@@ -303,11 +309,11 @@ S['Ensayos (propuestos para verificación de requerimientos)'] = [
        ['EN-03', 'RD-05, RD-10', 'Calibración con calibrador de 94 dB / 1 kHz; 10 repeticiones retirando y recolocando el calibrador', 'Lectura 94,0 ± 0,5 dB; desvío estándar ≤ 0,2 dB'],
        ['EN-04', 'RD-04', 'Tonos en escalones de 5 dB, de 30 a 100 dB SPL, comparados con el sonómetro de referencia', 'Error de linealidad ≤ ±1,0 dB'],
        ['EN-05', 'RD-01', 'Medición simultánea con el sonómetro de referencia en una sala y en una cabina real (ruido rosa y ambiente)', '±1,5 dB (250 Hz – 4 kHz); ±2 dB (125 Hz y 8 kHz)'],
-       ['EN-06', 'RD-06, RD-07', 'Funcionamiento continuo de 8 h con registro de desbordes, uso de CPU, pila y latencia', '0 desbordes; CPU ≤ 70 %; actualización ≤ 250 ms'],
-       ['EN-07', 'RD-08', 'Descarga completa con Wi-Fi activo y medición continua; luego, carga completa con una fuente USB-C que anuncie ≥ 1,5 A (y, a título informativo, con una fuente por defecto)', 'Autonomía ≥ 8 h; carga ≤ 4 h'],
+       ['EN-06', 'RD-06, RD-07', 'Funcionamiento continuo de 8 h con registro de desbordes, uso de CPU, pila y latencia, con 4 paneles conectados', '0 desbordes; CPU ≤ 70 %; actualización ≤ 250 ms; latencia hasta el panel ≤ 300 ms en el 99 % de las instantáneas'],
+       ['EN-07', 'RD-08', 'Descarga completa con Wi-Fi activo, 4 paneles recibiendo y medición continua; luego, carga completa con una fuente USB-C que anuncie ≥ 1,5 A (y, a título informativo, con una fuente por defecto)', 'Autonomía ≥ 8 h; carga ≤ 4 h'],
        ['EN-08', 'RD-09', '1000 sesiones sintéticas y 50 cortes de energía aleatorios durante la escritura', 'Sin pérdida de sesiones cerradas ni corrupción de archivos'],
-       ['EN-09', 'Ambiente', 'Piso de ruido con Wi-Fi activo frente a inactivo y con USB conectado; funcionamiento a 10 y 35 °C (según disponibilidad); descarga electrostática informal y teléfono móvil cercano (PU-HW-09)', 'Diferencia ≤ 1 dB; deriva ≤ 0,5 dB; sin daño ni reinicio'],
-       ['EN-10', 'RD-11', 'OTA válida, OTA con imagen corrupta y corte durante la actualización', 'El equipo arranca siempre en una imagen válida'],
+       ['EN-09', 'Ambiente', 'Piso de ruido con Wi-Fi activo (4 paneles recibiendo) frente a inactivo y con USB conectado; funcionamiento a 10 y 35 °C (según disponibilidad); descarga electrostática informal y teléfono móvil cercano (PU-HW-09)', 'Diferencia ≤ 1 dB; deriva ≤ 0,5 dB; sin daño ni reinicio'],
+       ['EN-10', 'RD-11', 'OTA válida, OTA con imagen corrupta o sin firma válida y corte durante la actualización (detalle en PU-COM-08)', 'El equipo arranca siempre en una imagen válida; calibración y configuración conservadas'],
        ['EN-11', 'Interfaz', 'Prueba de usabilidad con 3 o más fonoaudiólogos/as: calibrar, medir y obtener el informe sin asistencia', 'Tarea completa en < 5 min; SUS ≥ 70'],
        ['EN-12', 'RD-12', 'Equipo apagado 72 h a −10 °C y 72 h a 50 °C (cámara climática, según disponibilidad); medición del consumo apagado', 'Calibración, configuración y registros intactos; consumo ≤ 100 µA'],
        ['EN-13', 'RD-13', 'Caídas de 1 m sobre piso duro dentro del estuche (6 caras); luego, verificación funcional y con calibrador', 'Funciona; lectura 94,0 ± 0,5 dB']],
@@ -332,8 +338,8 @@ TAREAS = [
     ('3.3', 'Calibración y persistencia (NVS)', 12, [3, 4]),
     ('3.4', 'Registro en microSD', 16, [4]),
     ('3.5', 'Interfaz local (pantalla, botones, LED)', 24, [4, 5]),
-    ('3.6', 'Wi-Fi, servidor web y WebSocket', 24, [5]),
-    ('3.7', 'Actualización OTA', 8, [6]),
+    ('3.6', 'Wi-Fi, servidor web, WebSocket, protocolo y seguridad', 40, [5]),
+    ('3.7', 'Actualización OTA firmada, reversión y recuperación de fábrica', 16, [6]),
     ('3.8', 'Pruebas de concurrencia y robustez (FSM, fallas inyectadas)', 12, [3, 4]),
     ('4', '##Hardware', None, None),
     ('4.1', 'Selección de componentes y montaje del micrófono ICS-43434', 16, [1, 2]),
@@ -418,6 +424,8 @@ SIGLAS = [
     ('PCB', 'Circuito impreso'), ('TFT', 'Pantalla de cristal líquido color'),
     ('LDO', 'Regulador lineal de baja caída'), ('LGA', 'Encapsulado de contactos planos'),
     ('PWA', 'Aplicación web progresiva (celular)'), ('TRL', 'Nivel de madurez tecnológica'),
+    ('RTC', 'Reloj de tiempo real'), ('WPA2/WPA3', 'Protocolos de seguridad de redes Wi-Fi'),
+    ('PMF', 'Tramas de gestión protegidas (Wi-Fi)'), ('JSON', 'Formato de texto para datos estructurados'),
 ]
 S['Referencias'] += [
     P('Siglas y abreviaturas', size=24, bold=True, before=240, after=80, keep_next=True, align='left'),

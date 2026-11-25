@@ -39,7 +39,7 @@ add([P('', after=600),
         size=24, align='center', after=1400),
       P('**Autor:** Andrés Machtey', size=26, align='left', after=120),
       P('**Director propuesto:** Esp. Víctor Valotto (FIUNER)', size=26, align='left', after=120),
-      P('**Versión:** 0.4 (alineada con los Capítulos 3, 4 y 5) · Noviembre de 2026', size=26, align='left', after=120),
+      P('**Versión:** 0.5 (alineada con los Capítulos 3, 4, 5 y 6) · Noviembre de 2026', size=26, align='left', after=120),
       PB()])
 
 # ───────────── 1. Propósito ─────────────
@@ -51,6 +51,10 @@ add([H1('1. Propósito y alcance'),
        'alternativos y postcondiciones.'),
      P('El documento se irá refinando en cada iteración del proyecto; la versión inicial corresponde al '
        'entregable **E1** del plan de trabajo.'),
+     P('**Cambios de la versión 0.5:** el servidor de gestión consulta las sesiones en forma incremental en lugar '
+       'de recibirlas (CU-02); cuatro clientes y cierre 1013 al quinto (CU-04); PIN de 6 dígitos, contraseña, canal '
+       'y potencia del Wi-Fi en CU-07; abandono de la OTA por tiempo y reversión ante verificación pendiente en la '
+       'máquina de estados; pruebas PU-COM y fila de seguridad en la matriz de trazabilidad (Capítulo 6).', size=20),
      P('**Cambios de la versión 0.4:** eventos de USB conectado y desconectado (modo de carga y tiempo estimado), '
        'batería baja y batería crítica con apagado real por el enclavamiento POWER_HOLD, pulsación larga para '
        'apagar y medición con USB conectado (Capítulo 5); pruebas PU-HW en la matriz de trazabilidad.', size=20),
@@ -77,8 +81,9 @@ add([H1('1. Propósito y alcance'),
         ['Calibrador acústico', 'Dispositivo externo',
          'Fuente de referencia de 94 dB SPL a 1 kHz (IEC 60942) que se acopla al micrófono durante la calibración.'],
         ['Servidor de gestión', 'Sistema externo',
-         'Aplicación Python (FastAPI) que recibe las sesiones por Wi-Fi, mantiene el historial central y '
-         'genera el informe PDF. Es opcional: el instrumento funciona sin ella.']],
+         'Aplicación Python (FastAPI) que, al conectarse al Wi-Fi del equipo, consulta las sesiones nuevas '
+         '(GET /api/v1/sesiones con cursor), mantiene el historial central y genera el informe PDF. Es opcional: '
+         'el instrumento funciona sin ella.']],
        [2000, 1700, 5138], size=18),
      PB()])
 
@@ -146,7 +151,8 @@ add(spec('CU-02', 'Medir cabina', dict(
          '4. Cada ≤ 250 ms el sistema actualiza en pantalla y por WebSocket los niveles parciales por banda.\n'
          '5. Al cumplirse el tiempo de integración, el sistema ejecuta CU-03 «Evaluar conformidad».\n'
          '6. El sistema muestra el veredicto y las bandas que no cumplen, y enciende el LED (verde o rojo).\n'
-         '7. El sistema guarda la sesión en la microSD y la envía al servidor de gestión si está disponible.',
+         '7. El sistema guarda la sesión en la microSD y la deja disponible para la consulta incremental del '
+         'servidor de gestión.',
     alt='1a. Calibración vencida: el sistema avisa y permite medir solo en modo «indicativo», que queda marcado en el informe.\n'
         '1b. Piso de ruido no medido: se usa el piso típico de la hoja de datos y la sesión queda marcada.\n'
         '2a. USB conectado: se permite medir; la sesión queda marcada «medida con USB conectado».\n'
@@ -157,7 +163,8 @@ add(spec('CU-02', 'Medir cabina', dict(
         '4d. Desborde del anillo DMA: la medición continúa y la sesión se marca «con pérdidas», con la cantidad de muestras perdidas.\n'
         '4e. Pedido de escritura en flash (calibración, configuración u OTA): se rechaza hasta volver a REPOSO.\n'
         '5a. Banda cercana al piso de ruido propio: se aplica la regla de piso (CU-03, paso 1a).\n'
-        '7a. Servidor no disponible: la sesión queda pendiente de sincronización.\n'
+        '7a. El servidor de gestión no se conecta: la sesión queda en la microSD hasta la próxima consulta (sin '
+        'pérdida ni duplicados, porque el servidor pide desde su último cursor).\n'
         '7b. microSD ausente o con error: la sesión queda en memoria, se avisa al usuario y se reintenta la escritura.',
     post='Sesión registrada con fecha, cabina, operador, Leq por banda, veredicto, estado de la calibración y, '
          'si corresponde, la marca «con pérdidas».',
@@ -188,7 +195,8 @@ add(spec('CU-04', 'Ver medición en tiempo real', dict(
          '2. El sistema envía el estado y los niveles por banda en cada actualización.\n'
          '3. El panel muestra barras por banda frente al límite y el veredicto.',
     alt='2a. Pérdida de conexión: el panel reintenta la conexión de forma automática y la medición en curso no se ve afectada.\n'
-        '2b. Más de 4 clientes: se rechazan conexiones nuevas con un mensaje.',
+        '2b. Ya hay 4 clientes conectados: la quinta conexión WebSocket se cierra con el código 1013 («intente más '
+        'tarde») y el panel lo informa.',
     post='Sin cambios de estado en el instrumento.',
     traz='RD-06 · HU-07 · EN-06')))
 
@@ -221,19 +229,21 @@ add(spec('CU-06', 'Consultar historial', dict(
 
 add(spec('CU-07', 'Configurar instrumento', dict(
     act='Técnico/a',
-    desc='Ajusta los parámetros: tabla de límites ISO, tiempo de integración, red Wi-Fi, fecha y hora, '
+    desc='Ajusta los parámetros: tabla de límites ISO, tiempo de integración, red Wi-Fi (contraseña, canal y '
+         'potencia de transmisión), PIN de técnico de 6 dígitos, fecha y hora, '
          'vencimiento de la calibración y correcciones de respuesta del micrófono por banda (C_b). Desde el mismo '
          'menú descarga el diagnóstico: contadores de desbordes, uso de CPU, pilas y el volcado de memoria de la '
          'última falla.',
-    pre='Acceso con PIN de técnico. Estado REPOSO.',
+    pre='Acceso con PIN de técnico de 6 dígitos (desafío y respuesta; el PIN no viaja por la red). Estado REPOSO.',
     trig='El técnico entra a «Configuración».',
     main='1. El sistema solicita el PIN y lo valida.\n'
          '2. El técnico modifica los parámetros.\n'
          '3. El sistema valida los rangos (por ejemplo, integración de 10 a 120 s) y pide confirmación.\n'
          '4. El sistema guarda en NVS y registra el cambio.',
-    alt='1a. PIN incorrecto 3 veces: bloqueo por 5 min.\n3a. Valor fuera de rango: se rechaza indicando el rango válido.',
+    alt='1a. PIN incorrecto 3 veces: bloqueo por 5 min, global y persistente aunque se reinicie el equipo.\n'
+        '2a. Cambio de contraseña o canal del Wi-Fi: se aplica al confirmar y los clientes deben reconectarse.\n3a. Valor fuera de rango: se rechaza indicando el rango válido.',
     post='Configuración nueva vigente y registrada.',
-    traz='RD-06, Límites y tolerancias · HU-10 · D3.7, D4.8 · PU-RT-09 · EN-05, EN-11')))
+    traz='RD-06, Límites y tolerancias · HU-10 · D3.7, D4.8, D6.5 · PU-RT-09, PU-COM-07 · EN-05, EN-11')))
 
 add(spec('CU-08', 'Actualizar firmware (OTA)', dict(
     act='Técnico/a',
@@ -244,10 +254,13 @@ add(spec('CU-08', 'Actualizar firmware (OTA)', dict(
          '2. El sistema verifica la integridad y la firma, y marca la partición como de arranque.\n'
          '3. El sistema reinicia y ejecuta un autodiagnóstico (micrófono, microSD, DSP).\n'
          '4. Si el autodiagnóstico es correcto, confirma la imagen nueva.',
-    alt='2a. Imagen corrupta: se descarta y se mantiene la versión actual.\n'
-        '4a. Falla el autodiagnóstico: reversión automática a la imagen anterior.',
+    alt='1a. 30 s sin recibir datos: se abandona la actualización y se vuelve a REPOSO.\n'
+        '2a. Imagen corrupta o sin firma válida: se descarta y se mantiene la versión actual.\n'
+        '3a. Reinicio o corte durante el autodiagnóstico: al arrancar con la imagen pendiente de verificación, '
+        'el cargador de arranque revierte a la anterior.\n'
+        '4a. Falla el autodiagnóstico o no se confirma en 60 s: reversión automática a la imagen anterior.',
     post='Firmware actualizado o, ante falla, versión anterior intacta. Factor de calibración conservado.',
-    traz='RD-11 · HU-11 · D4.3 · PU-RT-05 · EN-10')))
+    traz='RD-11 · HU-11 · D4.3, D6.6 · PU-RT-05, PU-COM-08 · EN-10')))
 
 add(spec('CU-09', 'Exportar registros', dict(
     act='Fonoaudiólogo/a',
@@ -307,7 +320,9 @@ add([H1('5. Máquina de estados del firmware'),
         ['MIDIENDO_PISO', 'Cancelar', 'Descartar', 'REPOSO'],
         ['REPOSO', 'OTA iniciada (técnico)', 'Escribir partición inactiva', 'ACTUALIZANDO'],
         ['ACTUALIZANDO', 'Imagen válida', 'Reiniciar', 'INICIO'],
-        ['ACTUALIZANDO', 'Imagen corrupta', 'Descartar; conservar la versión actual', 'REPOSO'],
+        ['ACTUALIZANDO', 'Imagen corrupta o firma inválida', 'Descartar; conservar la versión actual', 'REPOSO'],
+        ['ACTUALIZANDO', '30 s sin datos', 'Abortar la escritura', 'REPOSO'],
+        ['INICIO', 'Imagen pendiente de verificación y autodiagnóstico fallido (o sin confirmar en 60 s)', 'Revertir a la imagen anterior; reiniciar', 'INICIO'],
         ['Cualquiera', 'Falla fatal o perro guardián', 'Guardar volcado de memoria; reiniciar', 'INICIO'],
         ['ERROR', 'Reintentar', 'Reiniciar subsistemas', 'INICIO']],
        [2300, 2400, 2638, 1500], size=17),
@@ -372,15 +387,16 @@ TRZ = [
     ('RD-03', 'CU-02, CU-03, CU-10', 'HU-14', 'PU-HW-01', 'EN-02'),
     ('RD-04', 'CU-02', 'HU-01', 'PU-DSP-04', 'EN-04'),
     ('RD-05', 'CU-01', 'HU-03', 'PU-DSP-03, PU-RT-08', 'EN-03'),
-    ('RD-06', 'CU-02, CU-04, CU-07', 'HU-07, HU-10', '—', 'EN-06'),
-    ('RD-07', 'CU-02', 'HU-01', 'PU-DSP-02, PU-RT-02, PU-RT-03, PU-RT-04', 'EN-06'),
+    ('RD-06', 'CU-02, CU-04, CU-07', 'HU-07, HU-10', 'PU-COM-02, PU-COM-03', 'EN-06'),
+    ('RD-07', 'CU-02', 'HU-01', 'PU-DSP-02, PU-RT-02, PU-RT-03, PU-RT-04, PU-COM-04', 'EN-06'),
     ('RD-08', 'CU-02', 'HU-06', 'PU-RT-07, PU-HW-02, PU-HW-05', 'EN-07'),
-    ('RD-09', 'CU-02, CU-05, CU-06, CU-09', 'HU-08, HU-09, HU-12', 'PU-RT-06', 'EN-08'),
-    ('RD-10', 'CU-01', 'HU-03, HU-04', '—', 'EN-03'),
-    ('RD-11', 'CU-08', 'HU-11', 'PU-RT-01, PU-RT-05', 'EN-10'),
+    ('RD-09', 'CU-02, CU-05, CU-06, CU-09', 'HU-08, HU-09, HU-12', 'PU-RT-06, PU-COM-11, PU-COM-12', 'EN-08'),
+    ('RD-10', 'CU-01', 'HU-03, HU-04', 'PU-COM-10', 'EN-03'),
+    ('RD-11', 'CU-08', 'HU-11', 'PU-RT-01, PU-RT-05, PU-COM-08', 'EN-10'),
     ('RD-12', '— (no funcional)', 'HU-15', 'PU-HW-03, PU-HW-04', 'EN-12'),
     ('RD-13', '— (no funcional)', 'HU-16', '—', 'EN-13'),
-    ('Interfaz', 'CU-02, CU-04, CU-05', 'HU-01, HU-07, HU-08', '—', 'EN-11'),
+    ('Interfaz', 'CU-02, CU-04, CU-05', 'HU-01, HU-07, HU-08', 'PU-COM-05, PU-COM-06', 'EN-11'),
+    ('Seguridad', 'CU-07, CU-08', 'HU-10, HU-11', 'PU-COM-07', '—'),
     ('Ambiente', 'CU-02, CU-10', '—', '—', 'EN-09'),
 ]
 add([H1('7. Matriz de trazabilidad'),
@@ -390,9 +406,11 @@ add([H1('7. Matriz de trazabilidad'),
        [1200, 2450, 2100, 2000, 1087], size=17, center_cols=(0, 4)),
      P('RD-12 y RD-13 son requisitos no funcionales (almacenamiento y manipulación): no tienen un caso de uso '
        'propio y se verifican directamente con ensayos. Las pruebas PU-DSP se definen en el Capítulo 3 '
-       '(sección 3.10), las PU-RT en el Capítulo 4 (sección 4.8) y las PU-HW en el Capítulo 5 (sección 5.10). '
+       '(sección 3.10), las PU-RT en el Capítulo 4 (sección 4.8), las PU-HW en el Capítulo 5 (sección 5.10) y las '
+       'PU-COM en el Capítulo 6 (sección 6.12). '
        'PU-RT-09 (perro guardián) y PU-HW-06 a PU-HW-09 (térmica, señal, polaridad, descarga electrostática) '
-       'verifican decisiones de diseño, no un requisito RD.', size=18, italic=True),
+       'verifican decisiones de diseño, no un requisito RD; lo mismo PU-COM-01 y PU-COM-09 (enlace y memoria). La fila '
+       '«Seguridad» agrupa las exigencias del Capítulo 6 (D6.5) que el anteproyecto enuncia como «otros requisitos».', size=18, italic=True),
      H1('8. Notas para Enterprise Architect'),
      B('Crear un paquete por vista: «Requisitos» (elementos Requirement RD-xx), «Casos de uso» (diagrama de '
        'la Figura 1), «Comportamiento» (máquina de estados) y «Verificación» (elementos Test EN-xx).'),

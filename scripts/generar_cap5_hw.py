@@ -15,7 +15,7 @@ from cap_common import H1, PB, CAP, EQ, KT, Figuras, ensamblar  # noqa: E402
 
 TPL, FIG, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
 FIGURA = Figuras(FIG, 'C5')
-VERSION = '0.2 (revisada con el método Elephant–Goldfish)'
+VERSION = '0.2.1 (revisada con el método Elephant–Goldfish; alineada con el Capítulo 6)'
 
 body = []
 add = body.extend
@@ -114,7 +114,8 @@ add([H1('5.3 Arquitectura y selección de componentes'),
      P('La Figura 5.1 muestra la arquitectura de hardware con sus buses, tensiones y conectores. El micrófono '
        'digital va en una placa satélite al extremo de un vástago (J2). El módulo ESP32-S3 concentra el '
        'procesamiento, la radio y el USB nativo. La pantalla usa SPI2, la microSD el controlador SDMMC y la '
-       'alimentación se detalla en la Figura 5.2.'),
+       'alimentación se detalla en la Figura 5.2. Un reloj de tiempo real (RTC) por I2C conserva la fecha con el '
+       'equipo apagado (decisión D6.7 del Capítulo 6).'),
      *FIGURA('cap5_bloques_hw.png', 16.5,
              'Figura 5.1. Diagrama de hardware por bloques: buses, tensiones y conectores.'),
      KT(['Función', 'Alternativas evaluadas', 'Elegido', 'Motivo'],
@@ -134,7 +135,11 @@ add([H1('5.3 Arquitectura y selección de componentes'),
          ['Pantalla', 'OLED 1,3"; TFT 2,4–2,8" SPI', 'TFT de 2,8 in SPI', 'Legible y en color para el veredicto; '
           'retroiluminación regulable'],
          ['Almacenamiento', 'Flash interna; microSD por SPI o SDMMC', 'microSD por SDMMC', 'Capacidad, extracción '
-          'por el usuario, bus independiente de la pantalla (Capítulo 4)']],
+          'por el usuario, bus independiente de la pantalla (Capítulo 4)'],
+         ['Reloj de tiempo real', 'Sin RTC (hora por la red); RTC del ESP32-S3; RTC externo con respaldo',
+          'RTC I2C de nanopotencia (familia RV-3028-C7)', 'El ESP32-S3 queda sin alimentación al apagarse (D5.4) y '
+          'pierde la hora; ≈ 45 nA en respaldo desde la celda, que además deshabilita su I2C (sin realimentación) '
+          '[13]']],
         [1500, 2500, 1900, 2937], size=16),
      CAP('Tabla 5.3. Selección de los componentes principales.')])
 
@@ -154,18 +159,20 @@ add([H1('5.4 Alimentación, autonomía y carga'),
          ['microSD (promedio con escrituras)', '1', '0,5', '3'],
          ['LED bicolor (promedio)', '2', '1', '5'],
          ['Micrófono ICS-43434', '0,49', '0', '0,49'],
-         ['Reposo de reguladores, comparador y divisor', '0,2', '0,2', '0,2'],
-         ['##Total', '##174', '##145', '##224']],
+         ['Transmisión Wi-Fi a 4 paneles (Capítulo 6)', '7', '1', '7'],
+         ['Reposo de reguladores, comparador, divisor y RTC', '0,2', '0,2', '0,2'],
+         ['##Total', '##181', '##146', '##231']],
         [4300, 1500, 1500, 1537], size=17, center_cols=(1, 2, 3)),
      CAP('Tabla 5.4. Presupuesto de consumo supuesto. En modo punto de acceso la radio no entra en suspensión, por '
          'lo que el ESP32-S3 se supuso cerca de su consumo de recepción más la CPU; en reposo se mantiene 240 MHz '
-         'como supuesto conservador (el Capítulo 4 reduce la frecuencia). Pico del sistema: 450 mA.'),
+         'como supuesto conservador (el Capítulo 4 reduce la frecuencia). La transmisión a los paneles (≈ 3,5 % del '
+         'tiempo, Capítulo 6) se suma a la recepción continua. Pico del sistema: 450 mA.'),
      H2('Corte por batería baja y regulador'),
      P('Entre la celda y VSYS hay una resistencia serie que se estimó en **250 mΩ**: resistencia interna de la celda '
        '(80 mΩ), protección de la celda (50 mΩ), MOSFET de polaridad (25 mΩ), FET de batería del cargador (50 mΩ) y '
        'conmutador y contactos (45 mΩ). El firmware cierra la sesión y apaga cuando VSYS con carga, promediado '
        'durante 1 s y con 100 mV de histéresis, baja de **3,50 V**:'),
-     EQ('OCV_corte = 3,50 V + 0,174 A · 0,25 Ω = 3,54 V   ⇒   carga utilizable ≈ 94 %', 1),
+     EQ('OCV_corte = 3,50 V + 0,181 A · 0,25 Ω = 3,55 V   ⇒   carga utilizable ≈ 94 %', 1),
      P('En ese punto, un pico de 450 mA lleva VSYS a 3,43 V y el riel digital a ≈ 3,18 V (con 0,25 V de caída del '
        'LDO): el LDO sale brevemente de regulación, pero el ESP32-S3 funciona entre 3,0 y 3,6 V, de modo que no es '
        'un límite duro. El riel del micrófono sigue en 3,3 V, porque el LP5907 cae pocos milivoltios con 0,5 mA. '
@@ -182,17 +189,18 @@ add([H1('5.4 Alimentación, autonomía y carga'),
              'Figura 5.3. Izquierda: autonomía según la corriente media, para celdas nuevas y al fin de vida a 10 °C. '
              'Derecha: tensión típica de una celda Li-ion y corte del firmware.'),
      KT(['Batería', 'Condición', 'Modo medición [h]', 'Modo reposo [h]', 'Peor caso [h]'],
-        [['18650 2600 mAh', 'Nueva, 25 °C', '14,1', '16,9', '10,9'],
-         ['18650 2600 mAh', 'Fin de vida (80 %), 10 °C', '10,1', '12,1', ('7,8', 'F8D7DA')],
-         [('18650 3000 mAh', 'D4EDDA'), 'Nueva, 25 °C', '16,3', '19,5', '12,6'],
-         [('18650 3000 mAh', 'D4EDDA'), 'Fin de vida (80 %)', '12,9', '15,5', '10,1'],
-         [('18650 3000 mAh', 'D4EDDA'), 'Fin de vida (80 %), 10 °C', '11,6', '13,9', '9,0']],
+        [['18650 2600 mAh', 'Nueva, 25 °C', '13,5', '16,8', '10,6'],
+         ['18650 2600 mAh', 'Fin de vida (80 %), 10 °C', '9,7', '12,0', ('7,6', 'F8D7DA')],
+         [('18650 3000 mAh', 'D4EDDA'), 'Nueva, 25 °C', '15,6', '19,4', '12,2'],
+         [('18650 3000 mAh', 'D4EDDA'), 'Fin de vida (80 %)', '12,4', '15,4', '9,7'],
+         [('18650 3000 mAh', 'D4EDDA'), 'Fin de vida (80 %), 10 °C', '11,1', '13,8', '8,7']],
         [2100, 2500, 1400, 1400, 1437], size=17, center_cols=(2, 3, 4)),
      CAP('Tabla 5.5. Autonomía estimada. Para el fin de vida la resistencia serie se multiplica por 1,5 y, a 10 °C, '
          'por 2, lo que sube el corte; "fin de vida y 10 °C" aplica además un factor 0,72 a la capacidad.'),
      P('**Decisión D5.2: celda 18650 de 3000 mAh protegida, en portapila.** La de 2600 mAh no cumple el peor caso '
-       'al fin de vida a 10 °C (7,8 h). La de 3000 mAh da 9,0 h. **Sensibilidad:** si el ESP32-S3 consume 20 mA más '
-       'que lo supuesto, el peor caso baja a 8,3 h; con 40 mA más, a 7,6 h. En ese caso la mitigación es reducir la '
+       'al fin de vida a 10 °C (7,6 h). La de 3000 mAh da 8,7 h, con la transmisión a 4 paneles incluida. '
+       '**Sensibilidad:** si el ESP32-S3 consume 20 mA más que lo supuesto, el peor caso baja a 8,0 h; con 40 mA más, '
+       'a 7,4 h, por debajo de RD-08. En ese caso la mitigación es reducir la '
        'retroiluminación o apagar el Wi-Fi tras un tiempo sin clientes (Capítulo 4), y EN-07 decide.'),
      H2('Carga por USB-C'),
      P('En el BQ24074 la corriente de **carga** la fija una resistencia en ISET, mientras que EN1/EN2 e ILIM limitan '
@@ -205,7 +213,7 @@ add([H1('5.4 Alimentación, autonomía y carga'),
      KT(['Fuente', 'Equipo', 'Corriente de carga', 'Tiempo estimado'],
         [['USB-C que anuncia ≥ 1,5 A', 'Apagado o encendido', '800 mA', ('3,6 h', 'D4EDDA')],
          ['Corriente por defecto (puerto de PC, cargador USB-A con cable A-C)', 'Apagado', '500 mA', '5,4 h'],
-         ['Corriente por defecto', 'Encendido (174 mA)', '326 mA', '8,0 h']],
+         ['Corriente por defecto', 'Encendido (181 mA)', '319 mA', '8,1 h']],
         [3800, 1800, 1600, 1637], size=17, center_cols=(2, 3)),
      CAP('Tabla 5.6. Tiempo de carga de la celda de 3000 mAh (aproximación t ≈ 0,8 · C / I + 0,6 h).'),
      P('**Decisión D5.3:** cargador BQ24074 con ISET = 0,8 A, ILIM = 1,5 A, selección de modo por comparador de CC '
@@ -220,13 +228,18 @@ add([H1('5.4 Alimentación, autonomía y carga'),
        'esa línea, ya sea por una pulsación larga o por batería crítica. Esto materializa el estado APAGADO del '
        'anexo y del Capítulo 4, y evita la descarga profunda que produciría un interruptor manual dejado cerrado. '
        'Con el equipo apagado quedan la protección de la celda (3 µA), la fuga del cargador sin entrada (típica de '
-       '4,3 µA, máxima de 6,5 µA [5]), el divisor de batería (2,1 µA) y el conmutador (1 µA): **≈ 12,6 µA** frente a '
+       '4,3 µA, máxima de 6,5 µA [5]), el divisor de batería (2,1 µA), el conmutador (1 µA) y el RTC en respaldo '
+       '(≈ 0,05 µA): **≈ 12,65 µA** frente a '
        'los 100 µA de RD-12. En 3 meses, la autodescarga química (≈ 270 mAh) y la electrónica (28 mAh) dejan '
        '≈ 90 % de la carga.'),
      P('**Medición de la batería.** El divisor de 2 × 1 MΩ con 100 nF va sobre el nodo BAT, de modo que mide la '
        'celda también mientras carga. Con el ESP32 apagado, la corriente hacia su pin queda limitada a ≈ 2 µA. Las '
        'salidas /CHG y /PGOOD son de drenador abierto con pull-up a 3V3_D, así que tampoco realimentan el ESP32 '
        'cuando está apagado.'),
+     P('**Reloj de tiempo real.** El RTC se alimenta desde 3V3_D y conmuta solo a su entrada de respaldo, '
+       'conectada a BAT, cuando el equipo se apaga; en respaldo deshabilita su interfaz I2C, de modo que los '
+       'pull-ups, alimentados desde 3V3_D, no realimentan el ESP32. Al cambiar la celda la hora se pierde y el '
+       'firmware la recupera desde el navegador (Capítulo 6). Su dueño en el firmware es T_MON (Capítulo 4).'),
      P('**Protección de polaridad.** Como la celda la cambia el usuario, un P-MOSFET en serie con la celda impide '
        'que una inserción invertida dañe el cargador y el resto del circuito. Al estar polarizado en conducción con '
        'la celda bien colocada, permite tanto la carga como la descarga; su resistencia (25 mΩ) ya está incluida en '
@@ -284,16 +297,18 @@ add([H1('5.6 Asignación de pines'),
          ['POWER_HOLD (enclavamiento)', '2', 'TFT CS (SPI2)', '10'],
          ['Lectura del pulsador de encendido', '4', 'TFT MOSI (SPI2)', '11'],
          ['Cargador /CHG', '5', 'TFT SCLK (SPI2)', '12'],
-         ['Cargador /PGOOD', '6', 'Libre (MISO de SPI2, para un táctil futuro)', '13'],
+         ['Cargador /PGOOD', '6', 'I2C SDA (RTC; táctil futuro por I2C)', '13'],
          ['Comparador "fuente ≥ 1,5 A"', '7', 'TFT retroiluminación (PWM)', '14'],
-         ['I2S BCLK / WS / SD', '15 / 16 / 17', 'TFT RST', '21'],
+         ['I2S BCLK / WS / SD', '15 / 16 / 17', 'I2C SCL (RTC)', '21'],
          ['Pulsadores MEDIR / CAL / MENÚ', '8 / 18 / 47', 'microSD CMD / CLK / D0', '38 / 39 / 40'],
          ['LED rojo / verde', '42 / 48', 'microSD detección de tarjeta', '41'],
          ['USB nativo D− / D+', '19 / 20', 'UART0 (puntos de prueba)', '43 / 44'],
          ['Botón de servicio (arranque)', '0', 'Sin uso: arranque, flash, PSRAM', '3, 45, 46, 26–37']],
         [3000, 1400, 3000, 1437], size=17, center_cols=(1, 3)),
      CAP('Tabla 5.7. Asignación de pines propuesta (pines dedicados de SPI2 verificados en ESP-IDF 5.4: CS 10, '
-         'MOSI 11, CLK 12, MISO 13).'),
+         'MOSI 11, CLK 12; MISO no se usa). La pantalla se reinicia por comando de software y con la red de reinicio '
+         'del encendido; un táctil futuro será capacitivo por I2C. MENÚ (GPIO47) es además el pin de recuperación de '
+         'fábrica del cargador de arranque (Capítulo 6).'),
      P('Los pulsadores usan pull-up interno, antirrebote por software (Capítulo 4) y diodos TVS. Durante el '
        'reinicio del ESP32-S3 sus pines quedan en alta impedancia: POWER_HOLD lleva un pull-down y la línea del '
        'pulsador de encendido mantiene el MOSFET conduciendo mientras se presiona, de modo que el equipo arranca '
@@ -316,7 +331,7 @@ add([H1('5.7 Circuito impreso, térmica y gabinete'),
        'USB nativo del ESP32-S3 (USB-Serial/JTAG), sin conversor USB-UART.'),
      H2('Térmica'),
      P('El caso peor no es la batería llena sino el **USB conectado**: la salida del cargador sube a 4,4 V y el LDO '
-       'disipa (4,4 − 3,3) V × 224 mA ≈ 246 mW. En SOT-89 o DFN (≈ 90 °C/W) eso significa 22 °C sobre el ambiente; '
+       'disipa (4,4 − 3,3) V × 231 mA ≈ 254 mW. En SOT-89 o DFN (≈ 90 °C/W) eso significa 23 °C sobre el ambiente; '
        'en SOT-23-5 serían ≈ 60 °C, por eso se descarta ese encapsulado. El cargador disipa (5 V − V_bat) · I_carga '
        '+ (5 V − 4,4 V) · I_sistema: entre 1,7 W (celda a 3,0 V) y 0,9 W (celda a 4,0 V). Con 44,5 °C/W su juntura '
        'sube entre 76 y 40 °C; al principio de una carga profunda puede actuar su regulación térmica (125 °C), lo '
@@ -382,7 +397,8 @@ add([H1('5.9 Costo, normativa y seguridad'),
          ['Pantalla TFT de 2,8 in SPI', '9', 'Pulsadores, LED, conectores', '4'],
          ['BQ24074 + LDO + LP5907', '4', 'Pasivos y diodos TVS', '5'],
          ['Comparador, MOSFET y NTC', '2,5', 'Gabinete PETG, vástago y cable', '12'],
-         ['PCB de 4 capas (parte del lote de 5)', '20', '##Total aproximado', '##≈ 84']],
+         ['RTC con cristal', '2', 'PCB de 4 capas (parte del lote de 5)', '20'],
+         ['', '', '##Total aproximado', '##≈ 86']],
         [3400, 900, 3600, 937], size=17, center_cols=(1, 3)),
      CAP('Tabla 5.10. Costo estimado de materiales por prototipo, sin envío ni impuestos; dentro de la estimación del '
          'anteproyecto (≈ USD 100, que incluía la placa de desarrollo).'),
@@ -409,7 +425,7 @@ add([H1('5.10 Plan de verificación'),
          ['PU-HW-02', 'Consumo por modo con amperímetro de registro', '±20 % del presupuesto, o presupuesto '
           'actualizado', 'D5.1, D5.2 · RD-08'],
          ['PU-HW-03', 'Corriente de batería con el equipo apagado; apagado por firmware', '≤ 100 µA (esperado '
-          '≈ 12,6 µA); apagado real al liberar POWER_HOLD', 'D5.4 · RD-12'],
+          '≈ 12,65 µA); apagado real al liberar POWER_HOLD', 'D5.4 · RD-12'],
          ['PU-HW-04', 'Lectura de batería frente a multímetro entre 3,0 y 4,2 V; disparo del corte', 'Error ≤ 30 mV; '
           'corte a 3,50 ± 0,05 V con carga', 'D5.1 · CU-02 · RD-12'],
          ['PU-HW-05', 'Carga con fuentes por defecto, de 1,5 A y de 3 A, con el equipo apagado y encendido', 'Modo '
@@ -433,12 +449,12 @@ add([H1('5.11 Conclusiones y decisiones'),
      KT(['ID', 'Decisión', 'Justificación', 'Verificación'],
         [['D5.1', 'LDO 3,3 V (≥ 600 mA); corte del firmware con VSYS ≤ 3,50 V', 'Sin rizado PFM ni emisión; 94 % de '
           'carga utilizable; buck-boost solo +8 %', 'PU-HW-02, PU-HW-04'],
-         ['D5.2', 'Celda 18650 de 3000 mAh protegida, en portapila', '9,0 h en el peor caso al fin de vida; '
+         ['D5.2', 'Celda 18650 de 3000 mAh protegida, en portapila', '8,7 h en el peor caso al fin de vida; '
           'reemplazable', 'EN-07'],
          ['D5.3', 'BQ24074: ISET 0,8 A, ILIM 1,5 A, modo por comparador de CC, NTC en TS', 'Carga en 3,6 h sin depender '
           'del ESP32; ventana de temperatura', 'PU-HW-05, PU-HW-06'],
          ['D5.4', 'Conmutador con enclavamiento (POWER_HOLD); protección de polaridad; divisor sobre BAT',
-          'Apagado comandable (12,6 µA); celda reemplazable segura', 'PU-HW-03, PU-HW-08'],
+          'Apagado comandable (12,65 µA); celda reemplazable segura', 'PU-HW-03, PU-HW-08'],
          ['D5.5', 'Riel dedicado al micrófono; placa satélite con cable apantallado, filtros RF y malla en ambos '
           'extremos', 'Rizado ≈ 75 µVpp frente a 15 mVpp admisibles', 'PU-HW-01, PU-HW-07, EN-09'],
          ['D5.6', 'Pines sin arranque, PSRAM ni ADC2; estados definidos con el ESP32 apagado o en reinicio',
@@ -467,7 +483,10 @@ add([H1('5.11 Conclusiones y decisiones'),
           'de los pines con el ESP32 apagado; diagrama de hardware por bloques; FMEA; masa y apilado; pull-down de SD, '
           'filtros RF y malla; normativa ampliada; pruebas PU-HW-08 y PU-HW-09. Decisiones propagadas al '
           'anteproyecto, al anexo de Ingeniería de Software v0.4 y al Capítulo 4. Registro: '
-          'revision_egm/registro_cap5_v0.2.md.']],
+          'revision_egm/registro_cap5_v0.2.md.'],
+         ['0.2.1', 'Alineación con el Capítulo 6: RTC I2C con respaldo desde la celda (Figura 5.1, Tablas 5.3 y '
+          '5.10); GPIO13 y GPIO21 como I2C, pantalla reiniciada por comando y MENÚ como pin de recuperación de '
+          'fábrica; ≈ 7 mA de transmisión en el presupuesto: peor caso de 8,7 h; consumo apagado ≈ 12,65 µA.']],
         [1100, 7737], size=17),
      H1('Referencias del capítulo'),
      *[P(r, size=20, align='left') for r in [
@@ -485,7 +504,8 @@ add([H1('5.11 Conclusiones y decisiones'),
          '[10] IEC 61010-1, IEC 61326-1, IEC 61000-4-2, IEC 62133-2 y Naciones Unidas, Manual de Pruebas y Criterios, '
          'sección 38.3.',
          '[11] Horowitz, P.; Hill, W. The Art of Electronics, 3.ª ed. Cambridge University Press, 2015.',
-         '[12] Bogatin, E. Signal and Power Integrity — Simplified, 3.ª ed. Prentice Hall, 2018.']]])
+         '[12] Bogatin, E. Signal and Power Integrity — Simplified, 3.ª ed. Prentice Hall, 2018.',
+         '[13] Micro Crystal. RV-3028-C7 Extreme Low Power Real-Time Clock Module — Application Manual.']]])
 
 ensamblar(TPL, body, FIGURA, OUT)
 print('OK', OUT)

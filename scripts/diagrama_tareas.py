@@ -93,8 +93,8 @@ arrow([(820, 190), (1088, 190)], '#d62728', dash=True)
 text(955, 182, 'calibración, piso, config.', 14, color='#d62728')
 bw = 150
 cols = [(560, ['ISR GPIO', 'antirrebote', '→ evento']), (730, ['T_UI · p8', 'dibujo por', 'notificación']),
-        (900, ['T_STOR · p6', 'dueño de la', 'microSD']), (1070, ['T_NET · p5', 'HTTP + WS', 'Wi-Fi/lwIP (18–23)']),
-        (1230, ['T_MON · p2', 'pila, CPU,', 'batería, WDT'])]
+        (900, ['T_STOR · p6', 'dueño de la', 'microSD']), (1070, ['T_NET · p5', 'httpd + WS', 'T_XFER · p4']),
+        (1230, ['T_MON · p2', 'pila, CPU,', 'batería, RTC'])]
 for x, ln in cols:
     box(x, 570, bw - 10 if x == 1230 else bw, 110, ln, '#fff', '#1e5e9f', size=17)
 # Colas
@@ -122,7 +122,7 @@ for x in (635, 805, 975, 1145, 1300):
 
 # Leyenda
 text(40, 900, 'Colas FreeRTOS: mensajes por valor, sin punteros compartidos. mbx = buzón de longitud 1 (xQueueOverwrite) '
-     'con la última instantánea; T_UI y T_NET reciben una notificación de tarea.', 15, 'start', '#333')
+     'con la última instantánea; T_UI recibe una notificación y T_NET un httpd_queue_work.', 15, 'start', '#333')
 text(40, 925, 'Ningún recurso tiene dos dueños: la microSD es solo de T_STOR, el estado solo de T_APP y las muestras '
      'solo de T_DSP; por eso no se necesitan mutex en el camino de tiempo real.', 15, 'start', '#333')
 a('</svg>')

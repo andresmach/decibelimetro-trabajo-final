@@ -15,7 +15,7 @@ from cap_common import H1, PB, CAP, EQ, KT, CODE, Figuras, ensamblar  # noqa: E4
 
 TPL, FIG, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
 FIGURA = Figuras(FIG, 'C4')
-VERSION = '0.2.1 (revisada con el método Elephant–Goldfish; alineada con el Capítulo 5)'
+VERSION = '0.2.2 (revisada con el método Elephant–Goldfish; alineada con los Capítulos 5 y 6)'
 
 body = []
 add = body.extend
@@ -174,9 +174,10 @@ add([H1('4.3 Arquitectura de tareas propuesta'),
         [['T_DSP', '1', '20', 'Datos del I2S / q_cmd', 'T = D = 21,3 ms', '4 kB', 'Conversión, banco de filtros, Σx², L_eq'],
          ['T_APP', '0', '10', 'q_evt / q_res (plazo 500 ms)', 'Esporádica; D = 50 ms', '4 kB', 'FSM, sesión, regla de piso, veredicto'],
          ['T_UI', '0', '8', 'Notificación', '≈ 235 ms', '6 kB', 'Dibujo de la pantalla'],
-         ['T_STOR', '0', '6', 'q_stor', 'D = 1 s', '6 kB', 'Archivos de sesión en la microSD (FAT)'],
-         ['T_NET', '0', '5', 'Notificación / red', 'D = 235 ms', '6 kB', 'Servidor HTTP y WebSocket'],
-         ['T_MON', '0', '2', 'Periódica', 'T = 1 s', '3 kB', 'Pilas, CPU; dueña del ADC1 (VBAT) y de /CHG, /PGOOD y «fuente ≥ 1,5 A»'],
+         ['T_STOR', '0', '6', 'q_stor / q_lect', 'D = 1 s', '6 kB', 'Archivos de sesión en la microSD (FAT); lecturas para historial y CSV'],
+         ['T_NET', '0', '5', 'httpd_queue_work / red', 'D = 235 ms', '6 kB', 'Tarea de esp_http_server: HTTP y WebSocket (Cap. 6)'],
+         ['T_XFER', '0', '4', 'Pedido asíncrono de httpd', 'Fondo; D = 1 s por trozo', '8 kB', 'Transferencias largas: OTA, CSV, historial (una a la vez)'],
+         ['T_MON', '0', '2', 'Periódica', 'T = 1 s', '3 kB', 'Pilas, CPU; dueña del ADC1 (VBAT), de /CHG, /PGOOD, «fuente ≥ 1,5 A» y del I2C (RTC)'],
          ['Wi-Fi, lwIP, esp_timer', '0', '18–23', 'ESP-IDF', '—', 'IDF', 'Sistema (fijadas al núcleo 0)'],
          ['IPC1', '1', '24', 'ESP-IDF', 'Esporádica', 'IDF', 'Servicios entre núcleos (p. ej. flash)']],
         [1300, 800, 700, 1700, 1500, 650, 2187], size=16, center_cols=(1, 2, 5)),
@@ -185,7 +186,7 @@ add([H1('4.3 Arquitectura de tareas propuesta'),
      P('**Prioridades.** En el núcleo 1, T_DSP tiene la mayor prioridad de aplicación; solo la superan las '
        'interrupciones, el tick y la tarea IPC1 de ESP-IDF. En el núcleo 0 las prioridades siguen la urgencia: '
        'T_APP coordina y debe responder rápido; T_UI tiene un plazo blando de refresco; T_STOR y T_NET son de '
-       'fondo; T_MON, la más baja, sirve además como testigo: si deja de correr, alguna tarea está acaparando '
+       'fondo, y T_XFER, por debajo de T_NET, hace que una descarga u OTA no demore la publicación; T_MON, la más baja, sirve además como testigo: si deja de correr, alguna tarea está acaparando '
        'el procesador. Para que la ISR del GDMA quede en el núcleo 1, el canal I2S se crea **desde T_DSP**: '
        'ESP-IDF asigna la interrupción al núcleo que inicializa el canal.'),
      P('**¿Prioridades fijas o EDF?** FreeRTOS planifica por prioridades fijas con desalojo. EDF (plazo más '
@@ -201,17 +202,23 @@ add([H1('4.4 Comunicación y sincronización'),
           'CALIBRAR, PISO, DETENER y REPOSO; T_DSP los aplica en el borde de bloque'],
          ['q_res', 'Cola', 'T_DSP → T_APP', '4 × 96 B', 'Resultado cada 11 bloques: L_eq parcial y acumulado por '
           'banda, bloques, descriptores perdidos y C máximo. Envío sin espera; si se llena, se cuenta'],
-         ['q_evt', 'Cola', 'ISR GPIO, T_NET, T_UI, T_STOR, T_MON → T_APP', '16 × 32 B', 'Eventos de pulsadores, comandos '
+         ['q_evt', 'Cola', 'ISR GPIO, T_NET, T_UI, T_STOR, T_MON → T_APP', '16 × 64 B', 'Eventos de pulsadores, comandos '
           'remotos y confirmaciones; desde la ISR con xQueueSendFromISR'],
          ['mbx', 'Cola de longitud 1', 'T_APP → T_UI, T_NET', '1 × 128 B', 'xQueueOverwrite / xQueuePeek: siempre la '
-          'última instantánea, sin acumular atraso; aviso con xTaskNotifyGive'],
+          'última instantánea, sin acumular atraso; aviso a T_UI con xTaskNotifyGive y a T_NET con httpd_queue_work '
+          'y una bandera atómica (si falla, se reintenta en el período siguiente)'],
+         ['q_net', 'Cola', 'T_APP → T_NET', '8 × 64 B', 'Confirmaciones de comandos (ack/nack) y eventos para los '
+          'paneles'],
+         ['q_lect, sb_lect', 'Cola y StreamBuffer', 'T_XFER ↔ T_STOR', '4 × 32 B + 4 kB', 'Pedidos de '
+          'lectura de archivos y datos devueltos por trozos; T_STOR sigue siendo el único dueño de la microSD'],
          ['q_stor', 'Cola', 'T_APP → T_STOR', '3 × 256 B', 'Registros de sesión; T_STOR confirma con un evento'],
          ['Contadores', 'Enteros atómicos de 32 bits', 'ISR I2S, T_DSP → T_MON', '—', 'Un solo escritor por '
           'contador; lectura sin bloqueo']],
         [1000, 1350, 2050, 1100, 3337], size=16),
      CAP('Tabla 4.6. Objetos de comunicación. Ninguno se comparte por puntero entre tareas.'),
      P('**Notificaciones o colas.** Las notificaciones de tarea de FreeRTOS son el mecanismo más liviano, pero '
-       'solo transportan 32 bits y un único receptor. Se usan para "hay una instantánea nueva" (T_UI, T_NET); '
+       'solo transportan 32 bits y un único receptor. Se usan para "hay una instantánea nueva" en T_UI; T_NET es la '
+       'tarea de esp_http_server y se activa con httpd_queue_work (Capítulo 6); '
        'para datos con estructura (comandos, resultados, registros) se usan colas.'),
      H2('Ciclo de T_DSP'),
      P('T_DSP no tiene estados de aplicación: solo modos (reposo, preparar, acumular, calibrar, piso). El '
@@ -313,13 +320,14 @@ add([H1('4.5 Análisis temporal'),
      P('En el núcleo 0 corren las tareas de la aplicación por debajo de las del sistema (Wi-Fi, esp_timer, lwIP), '
        'cuyos costos dependen del tráfico. Para mostrar el método se aplicó la ecuación (2) con **supuestos '
        'explícitos**: ráfagas de la tarea Wi-Fi de 1,5 ms cada 10 ms, lwIP 1 ms cada 10 ms y esp_timer 50 µs '
-       'cada 10 ms. La utilización resultante es del 50 %:'),
+       'cada 10 ms. La utilización resultante es del 52 %:'),
      KT(['Tarea', 'Prio.', 'C supuesto [ms]', 'R [ms]', 'D [ms]', 'Resultado'],
         [['T_APP', '10', '1', '3,6', '50', 'Cumple'],
          ['T_UI', '8', '40 (dibujo)', '57,3', '234,7', 'Cumple'],
          ['T_STOR', '6', '30 (escritura de sesión)', '97,5', '1000', 'Cumple'],
          ['T_NET', '5', '5 (trama WS)', '106,1', '234,7', 'Cumple'],
-         ['T_MON', '2', '1', '107,1', '1000', 'Cumple']],
+         ['T_XFER', '4', '20 (trozo de OTA o CSV)', '133,8', '1000', 'Cumple'],
+         ['T_MON', '2', '1', '134,8', '1000', 'Cumple']],
         [1500, 800, 2400, 1300, 1300, 1537], size=18, center_cols=(1, 2, 3, 4, 5)),
      CAP('Tabla 4.9. Análisis del núcleo 0 con costos supuestos. Las cifras se reemplazan por las medidas en '
          'PU-RT-04; lo importante es que el método y los plazos quedan definidos.'),
@@ -429,6 +437,14 @@ add([H1('4.7 Robustez y supervisión'),
          ['ESP_WIFI_TASK_PINNED_TO_CORE_0', 'y', 'Wi-Fi fuera del núcleo de tiempo real'],
          ['LWIP_TCPIP_TASK_AFFINITY_CPU0', 'y', 'lwIP no tiene afinidad por defecto'],
          ['httpd_config_t.core_id', '0', 'El servidor HTTP no tiene afinidad por defecto'],
+         ['HTTPD_WS_SUPPORT / HTTPD_WS_PRE_HANDSHAKE_CB_SUPPORT', 'y / y', 'WebSocket y control de Host y Origin '
+          'antes del protocolo (Cap. 6)'],
+         ['LWIP_MAX_SOCKETS', '16', '4 paneles, servidor, DNS y sockets internos (Cap. 6)'],
+         ['BOOTLOADER_APP_ROLLBACK_ENABLE', 'y', 'Reversión si la imagen nueva no se confirma'],
+         ['SECURE_SIGNED_APPS_NO_SECURE_BOOT', 'y', 'Solo se aceptan actualizaciones firmadas'],
+         ['BOOTLOADER_FACTORY_RESET / BOOTLOADER_OTA_DATA_ERASE', 'y / y', 'Recuperación de fábrica con el '
+          'pulsador MENÚ; vuelve a la imagen factory'],
+         ['PARTITION_TABLE_CUSTOM', 'y', 'nvs, otadata, cal, factory, ota_0, ota_1 y coredump (Tabla 6.13)'],
          ['I2S_ISR_IRAM_SAFE', 'y', 'DMA operativo durante operaciones de flash'],
          ['FREERTOS_CHECK_STACKOVERFLOW_CANARY', 'y', 'Detección de desbordes de pila'],
          ['FREERTOS_GENERATE_RUN_TIME_STATS', 'y', 'Uso de CPU por tarea'],
@@ -511,7 +527,10 @@ add([H1('4.9 Conclusiones y decisiones'),
           'Registro: revision_egm/registro_cap4_v0.2.md.'],
          ['0.2.1', 'Alineación con el Capítulo 5: T_MON dueña de la lectura de batería y de las señales del cargador '
           '(eventos a q_evt); umbral de batería crítica de 3,50 V filtrado; apagado real liberando POWER_HOLD; '
-          'margen de autonomía referido al Capítulo 5.']],
+          'margen de autonomía referido al Capítulo 5.'],
+         ['0.2.2', 'Alineación con el Capítulo 6: T_NET es la tarea de esp_http_server; nueva T_XFER (prio 4) para '
+          'transferencias largas; colas q_net, q_lect y StreamBuffer; q_evt de 64 B; T_MON dueña del I2C del RTC; '
+          'opciones de WebSocket, sockets, OTA firmada, reversión y recuperación de fábrica.']],
         [1100, 7737], size=17),
      H1('Referencias del capítulo'),
      *[P(r, size=20, align='left') for r in [

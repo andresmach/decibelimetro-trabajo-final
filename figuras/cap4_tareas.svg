@@ -64,12 +64,12 @@
 <text x="975.0" y="653.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">microSD</text>
 <rect x="1070" y="570" width="150" height="110" rx="8" fill="#fff" stroke="#1e5e9f" stroke-width="2"/>
 <text x="1145.0" y="609.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">T_NET · p5</text>
-<text x="1145.0" y="631.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">HTTP + WS</text>
-<text x="1145.0" y="653.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">Wi-Fi/lwIP (18–23)</text>
+<text x="1145.0" y="631.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">httpd + WS</text>
+<text x="1145.0" y="653.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">T_XFER · p4</text>
 <rect x="1230" y="570" width="140" height="110" rx="8" fill="#fff" stroke="#1e5e9f" stroke-width="2"/>
 <text x="1300.0" y="609.0" font-size="17" text-anchor="middle" fill="#111" font-weight="bold">T_MON · p2</text>
 <text x="1300.0" y="631.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">pila, CPU,</text>
-<text x="1300.0" y="653.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">batería, WDT</text>
+<text x="1300.0" y="653.0" font-size="14" text-anchor="middle" fill="#444" font-weight="normal">batería, RTC</text>
 <rect x="490" y="186" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
 <rect x="506" y="186" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
 <rect x="522" y="186" width="16" height="26" fill="#e8f0fb" stroke="#1e5e9f" stroke-width="1.8"/>
@@ -124,6 +124,6 @@
 <polygon points="1145,682 1151.5,695.0 1138.5,695.0" fill="#666"/>
 <polyline points="1300,790 1300,682" fill="none" stroke="#666" stroke-width="2.2"/>
 <polygon points="1300,682 1306.5,695.0 1293.5,695.0" fill="#666"/>
-<text x="40" y="900" font-size="15" text-anchor="start" fill="#333" font-weight="normal">Colas FreeRTOS: mensajes por valor, sin punteros compartidos. mbx = buzón de longitud 1 (xQueueOverwrite) con la última instantánea; T_UI y T_NET reciben una notificación de tarea.</text>
+<text x="40" y="900" font-size="15" text-anchor="start" fill="#333" font-weight="normal">Colas FreeRTOS: mensajes por valor, sin punteros compartidos. mbx = buzón de longitud 1 (xQueueOverwrite) con la última instantánea; T_UI recibe una notificación y T_NET un httpd_queue_work.</text>
 <text x="40" y="925" font-size="15" text-anchor="start" fill="#333" font-weight="normal">Ningún recurso tiene dos dueños: la microSD es solo de T_STOR, el estado solo de T_APP y las muestras solo de T_DSP; por eso no se necesitan mutex en el camino de tiempo real.</text>
 </svg>

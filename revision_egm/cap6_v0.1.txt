@@ -1,0 +1,821 @@
+                          Universidad Nacional de Entre Ríos
+                                 Facultad de Ingeniería
+                        Especialización en Sistemas Embebidos
+
+
+
+                                    Capítulo 6
+                               Comunicaciones
+Enlace Wi-Fi, protocolo de aplicación, integración con el firmware
+         de tiempo real, seguridad y actualización OTA
+
+Analizador autónomo de ruido ambiente por bandas de octava para la verificación
+                 de cabinas audiométricas según ISO 8253-1
+
+
+
+
+Autor: Andrés Machtey
+Director propuesto: Esp. Víctor Valotto (FIUNER)
+Versión: 0.1 (borrador para la revisión Elephant–Goldfish) · Noviembre de 2026
+Material reproducible: comunicaciones/analisis_comunicaciones.py,
+comunicaciones/graficos_com.gp, comunicaciones/resultados/ y scripts/diagrama_com.py
+Siglas y convenciones
+       Sigla                  Significado                    Sigla                Significado
+AP             Punto de acceso Wi-Fi                   STA           Estación Wi-Fi (cliente)
+               Protocolos de seguridad Wi-Fi (clave                  Tramas de gestión protegidas
+WPA2 / WPA3                                            PMF
+               compartida / SAE)                                     (802.11w)
+               Autenticación simultánea de iguales
+SAE                                                    PSK           Clave precompartida (WPA2)
+               (WPA3)
+               Intervalo de entrega de tráfico de
+DTIM           difusión a clientes en ahorro de        TU            Unidad de tiempo de 802.11 (1024 µs)
+               energía
+               Protocolo de transferencia de
+HTTP / WS                                              REST          Estilo de API sobre recursos HTTP
+               hipertexto / WebSocket
+JSON           Notación de objetos de JavaScript       CSV           Valores separados por comas
+OTA            Actualización de firmware inalámbrica   RTC           Reloj de tiempo real
+               Código de autenticación de mensajes                   Derivación de claves a partir de una
+HMAC                                                   PBKDF2
+               con clave                                             contraseña
+lwIP           Pila TCP/IP liviana usada por ESP-IDF   MSS           Tamaño máximo de segmento TCP
+                                                                     Potencia referida a 1 mW / ganancia
+RSSI           Potencia de señal recibida              dBm / dBi
+                                                                     de antena
+
+
+Los identificadores RD, EN, CU, HU, D3.x, D4.x y D5.x remiten al anteproyecto, al anexo de
+Ingeniería de Software y a los Capítulos 3 a 5. Las pruebas nuevas son PU-COM-xx, los hallazgos
+H6.x y las decisiones D6.x. Los valores marcados como supuestos (ganancias de antena,
+sensibilidad del celular, atenuación de la cabina, memoria) se reemplazan por mediciones. Los
+nombres de funciones y opciones de configuración corresponden a ESP-IDF 5.4 y se verificaron en
+su código fuente.
+
+6.1 Enfoque del capítulo
+Este capítulo analiza el proyecto desde las comunicaciones de un sistema embebido: el
+enlace de radio, la pila de protocolos, el protocolo de aplicación entre el equipo y sus
+clientes, la integración de la red con el firmware de tiempo real, la seguridad, la
+actualización remota del firmware y los buses internos que vinculan al microcontrolador
+con sus periféricos. Parte del análisis de las comunicaciones del prototipo del curso de
+DSP —un puerto serie con mensajes JSON y un servidor Python con WebSocket— y
+llega a un diseño en el que el instrumento es su propio servidor, sin PC ni infraestructura
+de red, justificado con cálculos reproducibles [1, 2].
+Requisitos que condicionan las comunicaciones
+   Requisito        Enunciado (anteproyecto y anexo)             Consecuencia para las comunicaciones
+                Indicación actualizada cada ≤ 250 ms en       Período de publicación de 234,7 ms; latencia de
+RD-06
+                pantalla y en el panel web                    extremo a extremo acotada (sección 6.6)
+                0 desbordes en 8 h; CPU del núcleo DSP ≤      La red no puede bloquear ni demorar a T_DSP
+RD-07
+                70 %                                          (D4.5, D4.6)
+                                                              El punto de acceso no duerme; costo de la
+RD-08           Autonomía ≥ 8 h con Wi-Fi activo
+                                                              transmisión (sección 6.4)
+                                                              Lectura paginada y en bloques desde la
+RD-09           ≥ 1000 sesiones; historial y exportación
+                                                              microSD
+                Calibración con fecha; OTA con reversión      Hora válida sin internet; imagen firmada,
+RD-10, RD-11
+                ante falla                                    particiones dobles y autodiagnóstico
+                Punto de acceso propio sin internet; panel,   Servidor HTTP y WebSocket embebido; panel
+Interfaz
+                historial, CSV e informe                      incluido en la imagen
+                El Wi-Fi propio no degrada la medición (EN-
+Ambiente                                                      Potencia de transmisión y picos de corriente
+                09)
+                WPA2 con contraseña configurable; sin         Modelo de amenazas, autenticación del técnico
+Otros
+                datos de pacientes                            y privacidad
+                Tiempo real, informe, historial,
+                                                              Recursos HTTP, mensajes WS, roles y estados
+CU-04 a CU-09   configuración, OTA y exportación por el
+                                                              en que se admite cada operación
+                panel
+
+
+                Tabla 6.1. Requisitos que condicionan el diseño de las comunicaciones.
+
+
+6.2 Análisis de las comunicaciones del prototipo
+En el prototipo, el ESP32 enviaba cada resultado como una línea JSON por la UART1 a
+921 600 bit/s, que llegaba a la PC por el conversor USB de la placa gracias a un puente
+de cable (H5.6). En la PC, un servidor FastAPI leía el puerto serie en un hilo, guardaba las
+mediciones en SQLite, las reenviaba por WebSocket a un panel en el navegador y
+generaba el informe PDF. La Tabla 6.2 resume los hallazgos de la revisión del código.
+  ID                     Hallazgo                             Evidencia                 Consecuencia              Sev.
+       El servidor calcula el nivel de la sesión con                             Subestima el L_eq; puede
+                                                       database.py:
+H6.1   el promedio aritmético de los niveles en dB                               convertir un NO APTA en        Alta
+                                                       AVG(db_125)…
+       (SQL AVG)                                                                 APTA (Figura 6.1)
+       El servidor responde al panel con estados y                               Dos fuentes de verdad; el
+       resultados de calibración fijos                 main.py:                  panel puede mostrar una
+H6.2                                                                                                            Alta
+       («measuring», medido 94,0, factor 1,0) sin      route_browser_cmd         medición que el equipo no
+       esperar al equipo                                                         inició
+                                                                                 Una actualización parcial
+       Los límites ISO están copiados en el            app_config.h, main.py,
+H6.3                                                                             da veredictos distintos para   Media
+       firmware, el servidor y el panel                index.html
+                                                                                 la misma medición
+       Protocolo de líneas JSON sin versión, sin
+                                                                                 Pérdidas y cortes no
+       número de secuencia ni verificación de          uart_comm.c,
+H6.4                                                                             detectables; evolución del     Media
+       integridad; las líneas inválidas solo se        serial_bridge.py
+                                                                                 protocolo frágil
+       registran
+       El hilo del puerto serie usa                                              Condición de carrera
+H6.5   asyncio.Queue.get_nowait(), que no es           serial_bridge.py: _run    esporádica; consumo de         Media
+       segura entre hilos, y sondea cada 5 ms                                    CPU en la PC
+                                                                                 Indicación de calibración
+       «cal_ok» se calcula como factor ≠ 1,0, y la
+                                                                                 sin relación con su
+H6.6   referencia de calibración se guarda en la       db_calculator.c, main.c                                  Media
+                                                                                 vigencia; parámetro
+       variable del tiempo de integración
+                                                                                 sobrescrito
+                                                                                 Aceptable en un puesto
+       Sin autenticación ni roles: cualquier cliente
+                                                                                 local; inadmisible en un
+H6.7   del WebSocket puede iniciar, detener o          main.py: ws_endpoint                                     Media
+                                                                                 punto de acceso
+       calibrar
+                                                                                 compartido
+       Al reconectarse, el panel no pide el estado                               Pantalla desactualizada
+H6.8                                                   index.html: connectWS                                    Baja
+       actual                                                                    hasta el próximo mensaje
+       La visualización remota depende de una PC                                 El instrumento no es
+H6.9                                                   README                                                   Alta
+       con el servidor y del cable USB                                           autónomo (H5.5)
+
+
+                          Tabla 6.2. Hallazgos en las comunicaciones del prototipo.
+
+H6.1 es un error metrológico, no solo de software. El nivel equivalente es un promedio
+de energía: L_eq = 10·log₁₀(⟨10^(L/10)⟩). Promediar los niveles en dB da siempre un valor
+menor o igual, y la diferencia crece con la fluctuación del ruido. Para fluctuaciones
+gaussianas en dB la diferencia es ≈ 0,115·σ² (1,0 dB con σ = 3 dB); para un ruido
+intermitente —un fondo de 20 dB SPL con un evento de 35 dB SPL el 10 % del tiempo—
+el L_eq es 26,1 dB y el promedio de niveles 21,5 dB. Con el límite de trabajo de 25 dB
+SPL de la banda de 250 Hz, la cabina resulta NO APTA según el L_eq y APTA según el
+promedio: el error va en la dirección insegura (Figura 6.1, derecha). El diseño nuevo
+calcula el L_eq de la sesión solo en el firmware, con acumuladores de energía (D4.7), y el
+resto del sistema lo transporta sin recalcularlo.
+ Figura 6.1. Izquierda: margen del enlace equipo → celular en función de la atenuación de la cabina (sección
+            6.4). Derecha: diferencia entre el L_eq y el promedio de niveles en dB (hallazgo H6.1).
+
+
+6.3 Arquitectura y elección de tecnologías
+La Figura 6.2 muestra la arquitectura propuesta. El equipo genera su propio punto de
+acceso; el navegador de un celular o de una PC descarga el panel desde el equipo y abre
+un canal WebSocket. Todo el servicio de red corre en el núcleo 0, en la tarea del servidor
+HTTP de ESP-IDF, que en este diseño es T_NET; el núcleo 1 sigue dedicado a T_DSP
+(D4.6).
+      Figura 6.2. Arquitectura de comunicaciones: clientes, enlace, pila de red, tareas y buses internos.
+
+    Aspecto             Alternativas evaluadas                Elegido                            Motivo
+                                                                               No depende de credenciales ni de la
+                   Equipo como cliente de la red del                           política de la red institucional (portales
+                                                        Punto de acceso
+Topología          hospital; punto de acceso propio;                           cautivos, WPA2-Enterprise, aislamiento
+                                                        propio
+                   Bluetooth LE; cable USB                                     de clientes); funciona en cualquier
+                                                                               servicio
+                                                                               Sin instalar nada; Web Bluetooth no
+Cliente            Aplicación nativa; navegador         Navegador              está disponible en Safari de iOS, lo que
+                                                                               descarta BLE sin aplicación propia
+                                                                               Bidireccional sobre una sola conexión;
+Transporte de      Sondeo HTTP; eventos del                                    soporte nativo en esp_http_server y en
+                                                        WebSocket
+tiempo real        servidor (SSE); WebSocket; MQTT                             todos los navegadores; MQTT exigiría
+                                                                               un broker
+                                                                               Descargas, caché, impresión e
+Consultas y                                             HTTP (API REST
+                   Todo por WebSocket; HTTP                                    integración con el servidor de gestión
+archivos                                                /api/v1)
+                                                                               con herramientas estándar
+                                                                               Legible en las herramientas del
+                   JSON; binario empaquetado;           JSON compacto y
+Formato                                                                        navegador; la diferencia de ocupación
+                   CBOR                                 versionado
+                                                                               del canal es despreciable (sección 6.5)
+                   Recibe los datos en vivo
+Servidor de                                                                    El equipo es la única fuente de los
+                   (prototipo); consulta las sesiones   Consulta incremental
+gestión                                                                        niveles y del veredicto (H6.1, H6.2)
+                   guardadas
+
+
+                               Tabla 6.3. Alternativas de arquitectura y elección.
+
+Decisión D6.1: punto de acceso propio con servidor HTTP y WebSocket embebido; el
+panel web viaja dentro de la imagen del firmware (D4.3). El modo cliente de la red
+institucional queda como trabajo futuro, porque exige gestionar credenciales de terceros y
+no aporta a los requisitos actuales.
+
+6.4 Enlace de radio
+Presupuesto del enlace con el equipo dentro de la cabina
+El caso de uso CU-04 supone que el equipo queda dentro de la cabina audiométrica y la
+fonoaudióloga lo sigue desde afuera. Las cabinas son recintos de paneles metálicos con
+relleno absorbente, ventana de doble vidrio y puerta con burletes: no se diseñan como
+jaulas de Faraday, pero atenúan la señal de 2,4 GHz en una magnitud que no figura en
+ninguna hoja de datos y que depende de la ventana, de las juntas y de los pasamuros. Es
+el principal riesgo de las comunicaciones y se trata con un presupuesto del enlace y una
+medición temprana (PU-COM-01).
+El enlace limitante es el descendente (equipo → celular), porque la sensibilidad de un
+celular es menos conocida y en general peor que la del ESP32-S3. Con la pérdida en
+espacio libre L = 20·log₁₀(4πd/λ) a 2,437 GHz y los supuestos de la Tabla 6.4, la
+atenuación de la cabina que deja 10 dB de margen de desvanecimiento es:
+              Distancia                P_TX = 8,5 dBm            P_TX = 13 dBm           P_TX = 19,5 dBm
+2 m (celular junto a la ventana)          31,3 dB                   35,8 dB                  42,3 dB
+3m                                        27,8 dB                   32,3 dB                  38,8 dB
+5m                                        23,3 dB                   27,8 dB                  34,3 dB
+10 m (otra sala)                          17,3 dB                   21,8 dB                  28,3 dB
+
+
+Tabla 6.4. Atenuación máxima admisible de la cabina con 10 dB de margen. Supuestos: antena del equipo 0
+dBi dentro del gabinete, celular −3 dBi, 3 dB de pérdidas por el cuerpo, sensibilidad del celular −85 dBm a la
+                                              menor tasa usada.
+
+La Figura 6.1 (izquierda) muestra el margen en función de la atenuación. Si una cabina
+atenúa más de ≈ 30 dB, el panel puede no funcionar desde la sala contigua aun a máxima
+potencia. Por eso el diseño no depende del enlace para medir: la medición, el veredicto y
+el registro ocurren en el equipo, que los muestra en su pantalla, y el panel se resincroniza
+al recuperar la conexión (sección 6.5). El enlace es una comodidad de CU-04 («Should»),
+no una condición de la medición.
+Parámetros del punto de acceso
+        Parámetro                          Valor                                       Justificación
+                                                                  WPA3 donde el celular lo admite; WPA2 para
+                          WPA2/WPA3 en transición, PMF
+Seguridad                                                         celulares anteriores; PMF evita las
+                          habilitado
+                                                                  desautenticaciones falsificadas (sección 6.7)
+                                                                  Canales sin solapamiento; se elige el menos
+                          Fijo (1, 6 u 11), configurable por el
+Canal                                                             ocupado del servicio con un analizador de Wi-Fi al
+                          técnico
+                                                                  instalar
+                                                                  Margen suficiente a 3 m con cabinas de hasta ≈ 32
+                          13 dBm por defecto (ajustable de 8,5
+Potencia de transmisión                                           dB; menos picos de corriente y acoplamiento al
+                          a 19,5 dBm)
+                                                                  micrófono (D5.5)
+                          100 TU; DTIM = 1 (valores por           Un celular en ahorro de energía recibe sus tramas
+Baliza y DTIM
+                          defecto)                                como mucho una baliza (102,4 ms) después
+                                                                  CU-04, flujo alternativo 2b; acota memoria y
+Clientes                  ≤ 4 (max_connection = 4)
+                                                                  ocupación del canal
+                                                                  Libera rápido el lugar de un celular que se fue sin
+Inactividad               30 s (esp_wifi_set_inactive_time)
+                                                                  desasociarse
+                          192.168.4.1; DHCP para 8 clientes;
+                                                                  El panel se abre con cualquier nombre; código QR
+Direccionamiento          DNS que responde con la propia
+                                                                  con la red y la dirección en la etiqueta
+                          dirección
+                                                                  El arranque de la radio calibra el PHY y produce
+Cambios de estado de la
+                          Solo en REPOSO                          picos de corriente; no debe ocurrir durante una
+radio
+                                                                  medición (EN-09)
+
+
+                                 Tabla 6.5. Configuración del punto de acceso.
+
+Ocupación del canal y energía
+Una instantánea JSON de 251 B viaja en una trama de ≈ 359 B con las cabeceras de
+WebSocket, TCP/IP y 802.11 con CCMP. Con 4 clientes a 4,26 tramas/s, la carga es de ≈
+49 kbit/s: a 6 Mbit/s ocupa el 3,5 % del canal, del cual 2,5 % corresponde a las balizas. El
+transmisor del equipo trabaja ese mismo 3,5 % del tiempo, de modo que la transmisión
+agrega ≈ 7 mA a la recepción continua del punto de acceso (supuesto: 300 mA en
+transmisión y 100 mA en recepción). Bajar la potencia de transmisión casi no cambia
+la autonomía: el costo del Wi-Fi está en mantener el receptor encendido, ya incluido en el
+presupuesto del Capítulo 5 (145 mA). La potencia se ajusta por los picos de corriente, el
+acoplamiento con el micrófono y la convivencia con otros equipos.
+
+Comportamiento de los celulares
+Un celular conectado a una red sin internet puede seguir usando los datos móviles como
+red por defecto: Android, por ejemplo, avisa que la red «no tiene acceso a internet» y,
+según la versión y la configuración, puede dirigir las conexiones del navegador por la red
+móvil, que no llega a 192.168.4.1. El DNS que responde con la propia dirección ayuda a
+que el sistema abra el panel como página de inicio de sesión, pero el comportamiento
+varía entre fabricantes y versiones. Se verifica con al menos tres celulares (PU-COM-06)
+y el manual indica cómo «mantener la conexión» o desactivar los datos móviles durante la
+medición.
+Decisión D6.2: punto de acceso WPA2/WPA3 con PMF, canal fijo configurable, 13 dBm
+por defecto, DTIM = 1, hasta 4 clientes y cambios de estado de la radio solo en REPOSO.
+El enlace es una comodidad: ninguna función de medición depende de él.
+6.5 Protocolo de aplicación
+El protocolo separa dos tipos de intercambio. Lo que cambia en el tiempo (niveles, estado,
+eventos) viaja por un único WebSocket; lo que se consulta o se descarga (historial, CSV,
+informe, configuración, imagen OTA) usa recursos HTTP bajo /api/v1. Las reglas que
+corrigen los hallazgos H6.2 a H6.8 son:
+ • Una sola fuente de verdad: el equipo calcula el L_eq, aplica la regla de piso de
+   ruido, compara con la tabla de límites vigente y emite el veredicto. El panel y el
+   servidor de gestión solo lo muestran; la tabla de límites viaja en el mensaje «hola»
+   para que el panel dibuje las barras, nunca para decidir.
+ • Versión y secuencia: todo mensaje lleva «v» (versión del protocolo) y las
+   instantáneas un número «seq» creciente; el panel detecta saltos y los informa sin
+   alterar la sesión, que está completa en el equipo.
+ • Resincronización: al abrirse el WebSocket, el equipo envía «hola» con el estado
+   completo; el panel no supone nada del estado anterior a la desconexión (H6.8).
+ • Comandos con confirmación: cada comando lleva un identificador elegido por el
+   panel; el equipo responde «ack» o «nack» con el motivo (por ejemplo, «estado:
+   MIDIENDO») y un mismo identificador repetido no se ejecuta dos veces. El panel
+   muestra un estado solo cuando lo confirma el equipo (H6.2).
+       Tipo       Sentido                    Cuándo                                 Contenido principal
+                                                                      v, equipo, versión de firmware, estado, sesión
+hola          Equipo → panel   Al abrir el WebSocket                  en curso, seq, tabla de límites, estado y fecha
+                                                                      de la calibración, hora_valida
+                               Cada 234,7 ms en MIDIENDO,             seq, t_ms, L_eq parcial y acumulado por banda
+inst          Equipo → panel   CALIBRANDO y MIDIENDO_PISO;            (décimas de dB), marcas de piso, avance,
+                               cada 1 s en los demás estados          veredicto parcial, descriptores perdidos, batería
+                               Cambio de estado, sesión cerrada,      tipo y datos (veredicto, batería baja, microSD,
+evento        Equipo → panel
+                               alarmas                                calibración vencida, actualización)
+                                                                      id, op (medir, detener, calibrar, piso, ping) y
+cmd           Panel → equipo   Acción del usuario
+                                                                      parámetros (cabina, operador)
+ack / nack    Equipo → panel   Respuesta a cada cmd                   id, resultado y motivo
+                                                                      Hora del navegador (ms desde 1970) y huso
+hora          Panel → equipo   Al conectar, si hora_valida es falso
+                                                                      horario (sección 6.9)
+
+
+                       Tabla 6.6. Mensajes del WebSocket (versión 1 del protocolo).
+
+Ejemplo de instantánea (251 B; la misma información en binario ocuparía 53 B):
+   {"v":1,"tipo":"inst","seq":123456,"t_ms":3600123,"estado":"MIDIENDO",
+    "sesion":"A1B2-000123","prog":0.45,
+    "lp":[27.3,19.8,16.4,20.1,25.9,29.4,34.2],
+    "la":[27.9,20.2,16.9,20.4,26.2,29.9,34.8],
+    "marca":[0,0,1,0,0,0,0],"ver":"PARCIAL_APTA","perd":0,"bat":87}
+          Método y recurso                 Rol               Función                          Observaciones
+                                                                                   Comprimido con gzip dentro de la
+GET /, /app.js, /app.css                Todos     Panel (CU-04)                    imagen; la versión del firmware
+                                                                                   invalida la caché
+                                                                                   Se verifica el encabezado Origin; un
+                                                                                   quinto cliente recibe un cierre con el
+GET /ws                                 Todos     Canal WebSocket
+                                                                                   código 1013 («reintentar más
+                                                                                   tarde»)
+                                                  Estado, batería, calibración y   Respuesta inmediata desde la
+GET /api/v1/estado                      Todos
+                                                  versión                          última instantánea
+GET /api/v1/sesiones?desde=…                                                       50 sesiones por página; lectura por
+                                        Todos     Historial paginado (CU-06)
+&hasta=…&cabina=…&cursor=…                                                         medio de T_STOR
+                                                  Detalle e informe HTML           Incluye CRC-32 del archivo de
+GET /api/v1/sesiones/{id} y …/informe   Todos
+                                                  imprimible (CU-05)               sesión
+GET /api/v1/export.csv?desde=…                                                     Transferencia en bloques (chunked)
+                                        Todos     Exportación (CU-09)
+&hasta=…                                                                           sin armar el archivo en memoria
+                                                                                   Devuelve un token de 128 bits con
+POST /api/v1/login/desafio y /login     Técnico   Autenticación (sección 6.7)
+                                                                                   vencimiento
+                                                  Límites, integración, Wi-Fi,     PUT solo en REPOSO; lo aplica
+GET / PUT /api/v1/config                Técnico
+                                                  hora (CU-07)                     T_APP
+                                                  Contadores, pilas, volcado de
+GET /api/v1/diag                        Técnico                                    Diagnóstico de D4.8
+                                                  memoria
+                                                                                   Solo en REPOSO; recepción en
+POST /api/v1/ota                        Técnico   Imagen de firmware (CU-08)
+                                                                                   bloques de 4 kB (sección 6.8)
+
+
+          Tabla 6.7. Recursos HTTP. Las respuestas son JSON salvo el panel, el informe y el CSV.
+
+JSON frente a binario. El formato binario ocupa 4,7 veces menos, pero con 4 clientes la
+ocupación del canal pasa de 3,5 % a ≈ 2,9 %: la diferencia no tiene efecto práctico,
+mientras que JSON se lee en las herramientas del navegador, se extiende sin romper
+clientes y simplifica el panel y el servidor de gestión. La serialización se hace con un
+formateador propio sobre un búfer estático de tamaño acotado (sin memoria dinámica);
+los comandos recibidos, que son cortos y poco frecuentes, se interpretan con el
+componente cJSON de ESP-IDF, rechazando los mensajes de más de 512 B.
+Decisión D6.3: protocolo JSON versionado sobre WebSocket para el tiempo real y API
+REST /api/v1 para consultas, descargas, configuración y OTA; el equipo es la única
+fuente de los niveles y del veredicto; secuencia, resincronización y comandos
+idempotentes con confirmación.
+
+6.6 Integración con el firmware de tiempo real
+El Capítulo 4 previó una tarea T_NET de prioridad 5 en el núcleo 0, avisada por
+notificación. Este capítulo la concreta: T_NET es la tarea del servidor esp_http_server,
+creada con core_id = 0, prioridad 5 y una pila de 6 kB. El servidor atiende sus conexiones
+en una sola tarea con select(), y las demás tareas le piden trabajo con
+httpd_queue_work(), que ejecuta una función dentro de ese contexto. La Figura 6.3
+muestra la secuencia completa.
+   Figura 6.3. Secuencia de conexión del panel, medición iniciada desde el panel, pérdida del cliente y
+                                             reconexión.
+
+Publicación sin bloqueo
+ • Instantáneas: T_APP escribe la instantánea en el buzón mbx (xQueueOverwrite,
+   D4.5) y, si no hay una publicación pendiente (bandera atómica), llama a
+   httpd_queue_work(). La función de trabajo lee mbx con xQueuePeek, serializa una
+   vez y envía a cada cliente WebSocket. Si se acumulan avisos, se publica siempre la
+   última instantánea.
+ • Respuestas y eventos: viajan por una cola nueva, q_net (T_APP → T_NET, 8 × 64
+   B), porque no pueden perderse; la misma función de trabajo la vacía. Si q_net se
+   llena, T_APP cuenta el desborde y el panel se resincroniza con «hola» en la próxima
+   conexión.
+ • Comandos: T_NET los convierte en eventos de q_evt con espera nula. Si la cola
+   está llena responde «nack: ocupado». T_APP es la única que decide si un comando
+   se admite en el estado actual (D4.3).
+ • Lecturas de la microSD: la microSD tiene un solo dueño, T_STOR (D4.5). T_NET
+   envía el pedido por una cola nueva, q_lect, y T_STOR responde por un búfer de flujo
+     (StreamBuffer   de  4     kB) en     bloques   que     T_NET      transmite                                       con
+     httpd_resp_send_chunk(). T_STOR atiende primero las escrituras de sesión.
+
+Clientes lentos o perdidos
+esp_http_server envía con send() bloqueante y un tiempo de espera de 5 s por defecto
+(send_wait_timeout). Un celular que se aleja dejaría a T_NET bloqueada hasta 5 s por
+trama, y con ella al resto de los clientes y a las descargas. Antes de cada envío
+WebSocket, T_NET consulta con select() y tiempo nulo si el socket es escribible: en lwIP
+eso exige más de TCP_SNDLOWAT = 2881 B libres en el búfer de envío de 5760 B, de
+modo que una trama de 255 B se escribe completa sin bloquear. Si no lo es, la trama se
+descarta para ese cliente y se cuenta; tras 8 descartes seguidos (≈ 1,9 s) el cliente se
+cierra con httpd_sess_trigger_close(). Las respuestas HTTP usan un send_wait_timeout
+de 2 s.
+
+Latencia de extremo a extremo
+                    Etapa                                  Típico [ms]     Peor caso [ms]               Fuente
+Fin del bloque → T_DSP termina                                 3,2               6,3          R_DSP pesimista (Cap. 4)
+T_DSP → T_APP y respuesta de T_APP                             1,0               3,6          Cap. 4, núcleo 0
+                                                                                              Respuesta de T_NET
+Publicación en T_NET                                             5,0             106,1
+                                                                                              (Cap. 4)
+Serialización y envío por lwIP (4 clientes)                      1,0              3,0         Supuesto (PU-COM-02)
+Acceso al canal y reintentos                                     2,0             15,0         Supuesto
+Cliente en ahorro de energía (DTIM = 1)                          20,0            102,4        Una baliza
+Navegador: decodificación y dibujo (60 Hz)                       8,0             16,7         Un cuadro
+Total                                                            40               253
+
+
+          Tabla 6.8. Latencia desde el fin de una ventana de integración hasta su dibujo en el panel.
+
+El período de actualización es de 234,7 ms (11 bloques), de modo que RD-06 se cumple
+por construcción; la antigüedad del dato en el panel es como mucho de 234,7 + 253 ≈ 488
+ms. Se adopta como criterio derivado una latencia ≤ 300 ms en el 99 % de las
+instantáneas (PU-COM-02).
+
+Configuración y memoria
+                Parámetro                                Valor                                  Motivo
+core_id / task_priority / stack_size           0 / 5 / 6144              T_NET del Capítulo 4
+                                                                         4 WebSocket + 2 HTTP simultáneos + 1 de margen
+max_open_sockets                               7
+                                                                         (lwIP: 10 sockets; el servidor reserva 3 internos)
+                                                                         Una conexión HTTP nueva desplaza a la menos
+lru_purge_enable                               true
+                                                                         usada en vez de rechazarse
+send_wait_timeout / recv_wait_timeout          2s/5s                     Acota el bloqueo con clientes lentos
+max_uri_handlers                               16                        Tabla 6.7
+CONFIG_HTTPD_WS_SUPPORT                        y                         Desactivado por defecto en ESP-IDF 5.4
+
+
+                                       Tabla 6.9. Configuración de esp_http_server.
+
+La memoria interna estimada para la red en el peor caso es de ≈ 119 kB: búferes del Wi-
+Fi (≈ 35 kB), estructuras del controlador y de WPA2/WPA3 (≈ 30 kB), seis sockets con su
+búfer de envío lleno (≈ 35 kB), el servidor (≈ 8 kB) y la recepción de OTA (≈ 5 kB). Todo
+queda     en     RAM     interna,    como      exige     D4.3,    y   se   verifica   con
+heap_caps_get_minimum_free_size() durante 8 h con carga (PU-COM-09).
+Decisión D6.4: T_NET es la tarea de esp_http_server (núcleo 0, prioridad 5, 6 kB).
+Publicación por mbx con httpd_queue_work(); respuestas y eventos por q_net; comandos
+a q_evt sin espera; lecturas de la microSD por T_STOR; envíos WebSocket sin bloqueo,
+con descarte y cierre de clientes perdidos.
+
+6.7 Seguridad
+El equipo no guarda datos de pacientes, pero su resultado respalda una decisión clínica
+(si la cabina es apta), su calibración tiene valor metrológico y su firmware puede
+reemplazarse por la red. El modelo de amenazas considera a cualquier persona del
+servicio dentro del alcance del Wi-Fi, con o sin la clave de la red, y a un sitio web externo
+abierto en el mismo celular; deja fuera el acceso físico prolongado al equipo [9, 10].
+       Activo                    Amenaza                              Control                          Riesgo residual
+                        Un cliente con la clave      Solo clientes asociados; Origin
+                                                                                                Aceptado: interrupción
+Medición en curso       detiene o reinicia la        verificado; la sesión interrumpida queda
+                                                                                                visible, sin resultado falso
+                        medición                     registrada como tal
+Configuración,                                       PIN de técnico, token con vencimiento,
+                        Cambio no autorizado                                                    Bajo
+límites y calibración                                solo en REPOSO, registro de cambios
+                                                                                                Bajo (acceso remoto); el
+                        Imagen maliciosa o           Imagen firmada, verificada antes de
+Firmware                                                                                        acceso físico queda fuera
+                        dañada                       arrancarla; PIN de técnico
+                                                                                                del alcance
+Credenciales del                                     El PIN nunca viaja: desafío y respuesta    Medio con WPA2 (ver
+                        Captura del PIN en el aire
+técnico                                              con HMAC-SHA256                            texto); bajo con WPA3
+Disponibilidad del      Desautenticaciones falsas;   PMF; ≤ 4 clientes; la medición no
+                                                                                                Aceptado
+panel                   saturación de clientes       depende de la red
+                        Un sitio externo usa el      Verificación de Origin; token para
+Navegador del
+                        WebSocket del equipo         operaciones de técnico; JSON con           Bajo
+usuario
+                        desde el mismo celular       verificación de tipo de contenido
+                                                     Fuera del alcance del prototipo; en
+Contenido               Lectura de la flash por
+                                                     producción, cifrado de la flash y          Documentado
+almacenado              USB
+                                                     arranque seguro
+                        Datos personales en las      Sin pacientes; el operador se registra
+Privacidad                                                                                      Bajo
+                        sesiones                     con iniciales (Ley 25.326)
+
+
+                                    Tabla 6.10. Modelo de amenazas simplificado.
+
+Clave de la red
+Cada equipo sale con una contraseña aleatoria de 12 caracteres sobre un alfabeto de 32
+símbolos sin caracteres ambiguos (60 bits), impresa en la etiqueta junto a un código QR
+que configura la red en el celular. Un ataque de diccionario fuera de línea contra WPA2, a
+10⁶ intentos por segundo, tardaría en promedio ≈ 1,8·10⁴ años. El técnico puede
+cambiarla (CU-07). El SSID incluye los últimos dígitos de la dirección MAC para distinguir
+equipos.
+Autenticación del técnico
+El PIN de 6 dígitos no viaja por la red. El equipo guarda K = PBKDF2-HMAC-
+SHA256(PIN, sal, 2000) en NVS; al iniciar sesión envía un desafío aleatorio de 128 bits, el
+panel responde HMAC-SHA256(K, desafío ‖ nonce del cliente) y el equipo devuelve un
+token aleatorio de 128 bits que vence a los 15 min de inactividad. El cálculo se hace en
+JavaScript propio de ≈ 3 kB, porque la API Web Crypto no está disponible en páginas
+servidas por HTTP fuera de localhost (no son un contexto seguro);
+crypto.getRandomValues() sí lo está y genera el nonce. Con 3 intentos y 5 min de bloqueo
+(CU-07), un ataque en línea tarda en promedio ≈ 1,6 años; con 4 dígitos serían ≈ 6 días.
+Límite honesto del esquema: con WPA2-PSK, quien conoce la clave de la red y captura
+el saludo de otra estación puede descifrar su tráfico, obtener el desafío y la respuesta y
+probar fuera de línea el millón de PINes posibles en minutos. El desafío evita la
+exposición directa del PIN, pero no resiste ese ataque; WPA3-SAE sí lo impide, porque
+cada asociación deriva claves independientes. Por eso se habilita WPA3 en transición, se
+recomienda operar como técnico desde un celular con WPA3 y se deja documentado. Un
+intercambio de claves autenticado por contraseña (PAKE) o HTTPS con un certificado
+propio verificado por una aplicación de gestión resolverían el problema en una versión de
+producción.
+
+¿Por qué no HTTPS?
+Un servidor HTTPS embebido exigiría un certificado autofirmado —que los navegadores
+rechazan con una advertencia en cada conexión, inaceptable para el usuario objetivo— o
+una autoridad propia instalada en cada celular. Además, cada sesión TLS consume del
+orden de 30 a 40 kB de RAM interna. Dentro de un enlace cifrado con WPA2/WPA3, con
+desafío para el técnico y verificación de Origin, el riesgo residual se considera aceptable
+para el prototipo y queda registrado en la Tabla 6.10.
+Decisión D6.5: red WPA2/WPA3 con PMF y contraseña aleatoria por equipo; técnico
+autenticado por desafío y respuesta con token de 15 min; Origin verificado en el
+WebSocket y en las operaciones que modifican; HTTP sin TLS dentro del enlace cifrado;
+sin datos de pacientes.
+
+6.8 Actualización OTA
+   Partición            Tipo         Desplazamiento      Tamaño                         Uso
+nvs            datos / nvs               0x9000           24 kB     Configuración y estado
+otadata        datos / ota              0xF000             8 kB     Selección de la imagen de arranque
+                                                                    Calibración, piso de ruido y C_b: nunca se
+cal            datos / nvs              0x11000           16 kB
+                                                                    borra automáticamente
+factory        app / factory             0x20000          4 MB      Imagen de recuperación (la entregada)
+ota_0          app / ota_0              0x420000          4 MB      Imagen A
+ota_1          app / ota_1              0x820000          4 MB      Imagen B
+coredump       datos / coredump         0xC20000          64 kB     Volcado de la última falla (D4.8)
+(libre)        —                        0xC30000         3,8 MB     Reserva
+
+
+                    Tabla 6.11. Tabla de particiones propuesta para la flash de 16 MB.
+La calibración vive en una partición NVS propia porque el patrón habitual de ESP-IDF
+borra la partición «nvs» cuando nvs_flash_init() detecta un formato nuevo o falta de
+páginas; separarla garantiza el criterio de HU-11 («conserva la calibración»). Además, se
+guarda una copia con CRC en la microSD.
+
+Procedimiento
+ • Precondiciones: estado REPOSO (T_APP pasa a ACTUALIZANDO, D4.3), token de
+   técnico y batería ≥ 50 % o USB conectado. La seguridad ante un corte la da el
+   esquema de dos imágenes; la condición de batería evita empezar una actualización
+   que el corte por batería baja interrumpiría.
+ • Recepción: POST /api/v1/ota en bloques de 4 kB con httpd_req_recv();
+   esp_ota_begin() con OTA_WITH_SEQUENTIAL_WRITES borra cada sector antes de
+   escribirlo, sin un borrado largo inicial. Con una imagen de 1,6 MB, la actualización
+   tarda ≈ 30 s, dominados por el borrado y la escritura de la flash (≈ 22 s); el avance se
+   informa por WebSocket.
+ • Verificación: esp_ota_end() comprueba el encabezado, el chip, el tamaño y el SHA-
+   256; con CONFIG_SECURE_SIGNED_APPS_NO_SECURE_BOOT y el esquema
+   RSA de Secure Boot V2, la firma se verifica al actualizar (con este esquema, no en
+   cada arranque). La imagen debe tener una versión mayor que la actual; degradar
+   exige confirmación explícita del técnico.
+ • Arranque                      y                autodiagnóstico:                    con
+   CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE la imagen nueva arranca en
+   estado ESP_OTA_IMG_PENDING_VERIFY. Antes de 60 s el firmware verifica la
+   partición cal y su CRC, el montaje de la microSD (si hay tarjeta), 1 s de captura I2S
+   con datos variables, un vector de prueba del banco de filtros (tono de 1 kHz sintético:
+   banda de 1 kHz dentro de ±0,05 dB de lo esperado), el punto de acceso y la memoria
+   libre. Si todo es correcto llama a esp_ota_mark_app_valid_cancel_rollback(); si no, a
+   esp_ota_mark_app_invalid_rollback_and_reboot(). Un reinicio por falla o por el perro
+   guardián durante la verificación también vuelve a la imagen anterior.
+ • Compatibilidad de NVS: cada versión lee las claves de las anteriores y no cambia el
+   significado de una clave existente; las claves nuevas se agregan con un número de
+   esquema. Así, tras una reversión, la imagen anterior sigue leyendo la configuración.
+ • Recuperación de fábrica: con CONFIG_BOOTLOADER_FACTORY_RESET,
+   mantener MENÚ presionado 5 s al encender (junto con el pulsador de encendido, que
+   sostiene la alimentación hasta que el firmware toma POWER_HOLD) vuelve a la
+   imagen       factory      y     borra      solo      la      partición     «nvs»
+   (CONFIG_BOOTLOADER_DATA_FACTORY_RESET = "nvs"): la calibración se
+   conserva.
+La antirreversión por eFuse (CONFIG_BOOTLOADER_APP_ANTI_ROLLBACK) y el
+arranque seguro por hardware son irreversibles y no se habilitan en el prototipo; se
+documentan para una versión de producción.
+Decisión D6.6: particiones factory, ota_0 y ota_1 de 4 MB y partición cal separada;
+imágenes firmadas, reversión automática con autodiagnóstico antes de confirmar, NVS
+compatible entre versiones y recuperación de fábrica por pulsador.
+
+6.9 Fecha y hora
+La fecha y la hora no son un detalle de presentación: fechan las sesiones (RD-09), la
+calibración y su vencimiento (RD-10). El equipo no tiene internet, de modo que no puede
+usar NTP, y el diseño del Capítulo 5 no incluye un reloj de tiempo real: al apagarse por el
+enclavamiento (D5.4), el ESP32-S3 queda sin alimentación y pierde la hora. Es un
+hallazgo de este capítulo sobre el diseño vigente.
+ • Propuesta para el Capítulo 5: un RTC de nanopotencia con cristal de 32 kHz,
+   alimentado desde la celda (del orden de 45 nA, despreciable frente a los 12,6 µA del
+   equipo apagado) y conectado por I2C. Como no quedan pines libres (Tabla 5.7), se
+   propone usar GPIO13 como SDA y liberar GPIO21 (reinicio de la pantalla) para SCL,
+   reiniciando la pantalla por comando o con la red de reinicio. El mismo bus serviría al
+   controlador táctil futuro, que también es I2C.
+ • Sincronización desde el navegador: «hola» informa hora_valida; si es falso, el
+   panel envía la hora del celular. El equipo la acepta automáticamente solo si su hora
+   no es válida y nunca si es anterior a la última sesión guardada; con hora válida,
+   ajustarla exige el token de técnico. Así nadie puede atrasar el reloj para ocultar una
+   calibración vencida.
+ • Sin hora válida: la sesión se guarda con el tiempo desde el arranque y el número de
+   arranque, marcada como «hora no confirmada»; si la hora se sincroniza antes de
+   apagar, el equipo la reconstruye.
+Mientras el equipo está encendido, el cristal principal de 40 MHz (±10 ppm) deriva ≈ 0,9 s
+por día; un RTC con cristal de ±5 ppm, ≈ 2,6 min por año. Decisión D6.7: RTC por I2C
+alimentado desde la celda (propuesto al Capítulo 5) y sincronización desde el navegador
+con las reglas anteriores.
+
+6.10 Buses internos
+Las comunicaciones del equipo incluyen los buses que unen al microcontrolador con sus
+periféricos. Cada uno tiene una sola tarea dueña, en línea con D4.5, y su capacidad
+supera holgadamente la demanda:
+      Bus             Periférico             Reloj                  Demanda y ocupación                     Dueño
+                  Micrófono ICS-                         Síncrono y de ocupación fija: 1,152 Mbit/s
+I2S                                    3,072 MHz                                                        T_DSP
+                  43434                                  útiles por DMA
+                                                         Siete barras ≈ 25 % del área: 7,7 ms a 40
+                                       10–40 MHz según
+SPI2 (DMA)        Pantalla TFT                           MHz o 30,7 ms a 10 MHz cada 234,7 ms (3        T_UI
+                                       el controlador
+                                                         a 13 %)
+                                                         Sesión de ≈ 2 kB: < 1 ms de bus; dominan
+SDMMC 1 bit       microSD              20–40 MHz         la latencia de la tarjeta y la FAT (10 a 100   T_STOR
+                                                         ms)
+                                                         Lectura de la hora: 0,23 ms al arrancar y al
+I2C (propuesto)   RTC; táctil futuro   400 kHz                                                          T_MON
+                                                         sincronizar
+                                                         Carga del firmware, consola y volcado de
+USB Serial/JTAG   PC de desarrollo     12 Mbit/s                                                        —
+                                                         memoria; no transporta mediciones
+UART0             Puntos de prueba     115 200 bit/s     Registros del cargador de arranque             —
+
+
+                              Tabla 6.12. Buses internos, demanda y tarea dueña.
+
+
+6.11 Integración con el servidor de gestión
+El servidor Python del prototipo se adapta (tarea 5.1 del anteproyecto) al modelo de
+consulta: cuando la PC se conecta al punto de acceso, pide GET /api/v1/sesiones?
+cursor=… desde la última sesión sincronizada y descarga cada sesión cerrada con su
+CRC-32. El identificador de sesión combina el identificador del equipo y un contador
+persistente, de modo que una sesión repetida no se duplica. El servidor no recalcula
+niveles: guarda el L_eq por banda y el veredicto que emitió el equipo, y si alguna vez
+promedia sesiones lo hace en energía. El puente serie, la simulación de estados y la
+copia de los límites (H6.2, H6.3, H6.5) desaparecen. Una PC con una sola interfaz Wi-Fi
+pierde internet mientras está conectada al equipo; con Ethernet y Wi-Fi a la vez, no.
+Decisión D6.8: el servidor de gestión sincroniza por consulta incremental e idempotente y
+no recalcula niveles ni veredictos.
+6.12 Plan de verificación
+    ID                        Procedimiento                             Criterio de aceptación                Verifica
+             RSSI del equipo dentro y fuera de al menos una        Atenuación medida; margen ≥ 10
+PU-COM-01    cabina real, con el celular a 1, 3 y 5 m, a 8,5, 13   dB a 3 m con 13 dBm o ajuste de     D6.2 · CU-04
+             y 19,5 dBm                                            D6.2
+             Latencia: t_ms de cada instantánea frente a la
+                                                                   Período ≤ 250 ms; latencia ≤ 300
+PU-COM-02    hora de recepción en el navegador (desfase                                                RD-06 · D6.4
+                                                                   ms en el 99 %
+             estimado con ping), 30 min con 1 y 4 clientes
+                                                                   Los demás reciben ≥ 99 % de las
+             Un cliente se aleja o se apaga sin cerrar durante
+PU-COM-03                                                          instantáneas; cierre del perdido    D6.4
+             una medición con otros 3 clientes
+                                                                   en ≤ 3 s
+             Carga de comunicaciones durante la medición (=        0 desbordes; C de T_DSP sin
+PU-COM-04                                                                                              RD-07 · D4.6
+             PU-RT-04): 4 clientes, CSV y reconexiones             cambios
+             Mensajes inválidos: JSON mal formado, campos          Sin reinicio; nack con motivo; un
+PU-COM-05    faltantes, > 512 B, versión desconocida,              id repetido no se ejecuta dos       D6.3
+             comandos repetidos                                    veces
+                                                                   Comportamiento documentado;
+             Panel en 2 versiones de Android, 1 de iOS y una
+PU-COM-06                                                          panel operativo en todos            D6.2 · EN-11
+             PC, con datos móviles activos
+                                                                   siguiendo el manual
+                                                                   Rechazos y bloqueo según CU-
+             PIN erróneo, token vencido, Origin ajeno, /config
+PU-COM-07                                                          07; el PIN no aparece en la         D6.5
+             sin token; captura del tráfico con otra estación
+                                                                   captura
+             OTA (amplía EN-10): imagen sin firmar, con otra
+             clave, truncada, de otro chip, versión anterior;      Siempre arranca una imagen
+PU-COM-08                                                                                              RD-11 · D6.6
+             corte en 5 puntos; reinicio durante el                válida; calibración conservada
+             autodiagnóstico; recuperación de fábrica
+             Memoria interna mínima durante 8 h con 4
+PU-COM-09                                                          ≥ 40 kB libres; deriva ≤ 1 kB/h     D6.4
+             clientes y una OTA en reposo
+             Hora: 24 h apagado con RTC; arranque sin RTC;         Deriva ≤ 1 s; sesión marcada;
+PU-COM-10                                                                                              D6.7 · RD-10
+             intento de atrasar el reloj sin token                 ajuste rechazado
+             Sincronización del servidor de gestión: sesiones      Sin duplicados; diferencia ≤ 0,01
+PU-COM-11                                                                                              D6.8 · H6.1
+             repetidas y L_eq frente al equipo                     dB
+             Piso de ruido con Wi-Fi activo e inactivo, ahora
+EN-09                                                              Diferencia ≤ 1 dB                   D6.2 · Ambiente
+             con 4 clientes recibiendo
+
+
+            Tabla 6.13. Pruebas de comunicaciones y ensayos del anteproyecto relacionados.
+6.13 Conclusiones y decisiones
+   ID                      Decisión                                   Justificación               Verificación
+                                                         Sin dependencia de la red
+         Punto de acceso propio con HTTP y
+D6.1                                                     institucional ni de una PC;          PU-COM-06
+         WebSocket; panel dentro de la imagen
+                                                         navegador estándar
+         WPA2/WPA3 con PMF, canal fijo, 13 dBm,          Margen hasta ≈ 32 dB de atenuación
+D6.2     DTIM = 1, ≤ 4 clientes; radio solo cambia en    a 3 m; la medición no depende del    PU-COM-01, EN-09
+         REPOSO                                          enlace
+         JSON versionado por WebSocket y API
+                                                         Corrige H6.1 a H6.8; ocupación del
+D6.3     REST /api/v1; el equipo, única fuente del                                            PU-COM-05
+                                                         canal del 3,5 %
+         veredicto
+         T_NET = tarea de esp_http_server; mbx +
+                                                         Latencia ≤ 253 ms en el peor caso;
+D6.4     httpd_queue_work, q_net, q_lect; envío sin                                           PU-COM-02 a 04, 09
+                                                         ningún cliente detiene a los demás
+         bloqueo
+         Contraseña aleatoria por equipo; PIN por        Modelo de amenazas; riesgo
+D6.5                                                                                          PU-COM-07
+         desafío y token; Origin; HTTP sin TLS           residual con WPA2 documentado
+         factory + ota_0/ota_1, partición cal, firma,
+D6.6                                                     RD-11 y HU-11                        PU-COM-08, EN-10
+         reversión con autodiagnóstico
+         RTC por I2C desde la celda (propuesto) y hora   Fechas válidas para RD-09 y RD-10
+D6.7                                                                                          PU-COM-10
+         desde el navegador con reglas                   sin internet
+         Servidor de gestión por consulta incremental,
+D6.8                                                     Elimina el sesgo de H6.1             PU-COM-11
+         sin recalcular
+
+
+                        Tabla 6.14. Decisiones de diseño del capítulo y su verificación.
+
+Pendientes
+ • Medir la atenuación de cabinas reales (PU-COM-01) lo antes posible: es el principal
+   riesgo del capítulo y condiciona la potencia de transmisión y las instrucciones de uso.
+ • Confirmar con el autor la incorporación del RTC al hardware (D6.7) y la reasignación
+   de GPIO13 y GPIO21.
+ • Medir la memoria y el tiempo de serialización reales (PU-COM-02 y 09) y ajustar la
+   Tabla 6.8.
+
+Historial de revisión
+  Versión                                                     Cambios
+0.1           Borrador inicial para la revisión con tres revisores independientes.
+
+
+
+
+Referencias del capítulo
+[1] Kurose, J. F.; Ross, K. W. Computer Networking: A Top-Down Approach, 8.ª ed. Pearson, 2021.
+[2] Espressif Systems. ESP-IDF Programming Guide v5.4: Wi-Fi, esp_http_server, lwIP, OTA,
+Secure Boot V2 y Partition Tables.
+[3] Fette, I.; Melnikov, A. RFC 6455 — The WebSocket Protocol. IETF, 2011.
+[4] Fielding, R.; Nottingham, M.; Reschke, J. RFC 9110 — HTTP Semantics. IETF, 2022.
+[5] IEEE Std 802.11-2020. Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY)
+Specifications.
+[6] Wi-Fi Alliance. WPA3 Specification, versión 3.x.
+[7] Espressif Systems. ESP32-S3 Series Datasheet (características de RF).
+[8] Friis, H. T. A Note on a Simple Transmission Formula. Proceedings of the IRE, 34(5), 1946.
+[9] OWASP. Internet of Things Top 10, 2018.
+[10] ETSI EN 303 645. Cyber Security for Consumer Internet of Things: Baseline Requirements,
+2020.
+[11] Krawczyk, H.; Bellare, M.; Canetti, R. RFC 2104 — HMAC: Keyed-Hashing for Message
+Authentication; Moriarty, K. et al. RFC 8018 — PKCS #5: Password-Based Cryptography
+Specification v2.1.
+[12] W3C. Secure Contexts (Candidate Recommendation) y Web Cryptography API.
+[13] República Argentina. Ley 25.326 de Protección de los Datos Personales.
+[14] IEC 61672-1:2013. Electroacoustics — Sound level meters — Part 1: Specifications (definición
+del nivel equivalente).
+
